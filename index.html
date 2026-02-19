@@ -2,24 +2,119 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Scheduly — Book a Time</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <!-- EmailJS — sends booking notifications to your inbox, no backend needed -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body, #root { height: 100%; }
+    html { height: 100%; }
     body {
+      min-height: 100%;
       background: #1e2028;
       font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
     input, textarea, button { font-family: inherit; }
     textarea { resize: vertical; }
+
+    /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #1e2028; }
     ::-webkit-scrollbar-thumb { background: #363a4a; border-radius: 3px; }
+
+    /* ── Responsive layout classes ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .admin-two-col {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    .time-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .slot-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .main-wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 36px 24px;
+    }
+    .hero-inner {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-sm {
+      display: inline-block;
+      padding: 22px 40px;
+      text-align: center;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 700px) {
+      .two-col {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .admin-two-col {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .main-wrap {
+        padding: 20px 16px;
+      }
+      .hero-inner {
+        padding: 0;
+      }
+      .time-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 6px;
+      }
+      .card-sm {
+        display: block;
+        padding: 18px 20px;
+      }
+    }
+
+    /* ── Input focus glow ── */
+    input:focus, textarea:focus {
+      border-color: rgba(232,168,124,0.6) !important;
+      box-shadow: 0 0 0 3px rgba(232,168,124,0.1);
+    }
+
+    /* ── Button hover ── */
+    .primary-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(232,168,124,0.45) !important;
+    }
+    .primary-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    .ghost-btn:hover {
+      border-color: rgba(232,168,124,0.4) !important;
+      color: #e8a87c !important;
+    }
   </style>
 </head>
 <body>
@@ -28,18 +123,29 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
 
-    // ── Config — change these to customise ──────────────────────────────────
-    const ADMIN_PASSWORD = "admin123";
-    const APP_TITLE      = "Scheduly";
-    const STORAGE_PREFIX = "scheduly_";   // change if running multiple instances
+    // ════════════════════════════════════════════════════════════════════════
+    // ██  CONFIG — edit these before uploading to GitHub
+    // ════════════════════════════════════════════════════════════════════════
 
-    // ── Constants ───────────────────────────────────────────────────────────
+    const ADMIN_PASSWORD    = "admin123";          // Your admin password
+    const APP_TITLE         = "Scheduly";          // Your name / brand
+    const ORGANIZER_EMAIL   = "you@example.com";   // Your email — gets booking notifications
+    const STORAGE_PREFIX    = "scheduly_";         // Change if running multiple instances
+
+    // EmailJS setup (free at emailjs.com — see README for instructions)
+    const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";   // from EmailJS → Account → API Keys
+    const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";   // from EmailJS → Email Services
+    const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";  // from EmailJS → Email Templates
+
+    const EMAIL_ENABLED = EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY";
+
+    // ════════════════════════════════════════════════════════════════════════
+
     const MONTHS     = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    const DAYS       = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const DAYS_SHORT = ["Su","Mo","Tu","We","Th","Fr","Sa"];
     const TIME_SLOTS = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"];
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
-    const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+    const getDaysInMonth = (y, m) => new Date(y, m+1, 0).getDate();
     const getFirstDay    = (y, m) => new Date(y, m, 1).getDay();
     const dateKey = (y, m, d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const formatDate = (key) => {
@@ -49,28 +155,24 @@
     const isDatePast = (key) => {
       const today = new Date(); today.setHours(0,0,0,0);
       const [y,m,d] = key.split('-').map(Number);
-      return new Date(y, m-1, d) < today;
+      return new Date(y,m-1,d) < today;
     };
 
-    // ── Local storage persistence ───────────────────────────────────────────
     const loadData = (key) => {
-      try {
-        const v = localStorage.getItem(STORAGE_PREFIX + key);
-        return v ? JSON.parse(v) : null;
-      } catch { return null; }
+      try { const v = localStorage.getItem(STORAGE_PREFIX+key); return v ? JSON.parse(v) : null; }
+      catch { return null; }
     };
     const saveData = (key, value) => {
-      try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); return true; }
+      try { localStorage.setItem(STORAGE_PREFIX+key, JSON.stringify(value)); return true; }
       catch { return false; }
     };
 
-    // ── Palette ─────────────────────────────────────────────────────────────
+    // ── Palette ──────────────────────────────────────────────────────────────
     const C = {
       bg:        "#1e2028",
       surface:   "#272a35",
       surfaceHi: "#2e3140",
       border:    "#363a4a",
-      borderHi:  "#454a60",
       text:      "#eae8f0",
       textMid:   "#9b98ac",
       textSoft:  "#636078",
@@ -86,11 +188,10 @@
       slateBdr:  "rgba(99,96,120,0.35)",
     };
 
-    // ── Shared style objects ─────────────────────────────────────────────────
     const inputSt = {
       width:"100%", background:C.bg, border:`1.5px solid ${C.border}`,
       borderRadius:"8px", color:C.text, padding:"12px 15px", fontSize:"15px",
-      outline:"none", transition:"border-color 0.2s",
+      outline:"none", transition:"border-color 0.2s, box-shadow 0.2s",
     };
     const labelSt = {
       fontSize:"10px", letterSpacing:"0.14em", color:C.textSoft,
@@ -101,82 +202,74 @@
       borderRadius:"14px", padding:"22px 24px", marginBottom:"14px",
       boxShadow:"0 4px 20px rgba(0,0,0,0.25)",
     };
-    const navBtnSt = {
-      background:C.surfaceHi, border:`1px solid ${C.border}`, color:C.textMid,
-      width:"34px", height:"34px", borderRadius:"50%", cursor:"pointer",
-      fontSize:"18px", display:"flex", alignItems:"center", justifyContent:"center",
-      padding:0, boxShadow:"0 2px 8px rgba(0,0,0,0.2)", lineHeight:1,
-    };
-    const ghostBtnSt = {
-      background:"transparent", border:`1px solid ${C.border}`, color:C.textMid,
-      padding:"7px 16px", cursor:"pointer", fontSize:"11px", letterSpacing:"0.1em",
-      borderRadius:"7px", transition:"all 0.15s",
-    };
-    const primaryBtnSt = (disabled) => ({
-      background: disabled ? C.surfaceHi : `linear-gradient(135deg, #e8a87c, #d4845a)`,
-      border: disabled ? `1px solid ${C.border}` : "none",
-      color: disabled ? C.slate : "#1e1a14",
-      padding:"13px 30px", fontSize:"14px", letterSpacing:"0.06em",
-      cursor: disabled ? "not-allowed" : "pointer", borderRadius:"9px",
-      transition:"all 0.2s", display:"inline-block", fontWeight:"600",
-      boxShadow: disabled ? "none" : "0 4px 16px rgba(232,168,124,0.35)",
-      width: "100%", textAlign: "center",
-    });
 
-    // ── Sub-components ───────────────────────────────────────────────────────
+    // ── Reusable components ───────────────────────────────────────────────────
     function Header({ onAdmin, label, badge }) {
       return (
         <div style={{
           background:"linear-gradient(to right,#1a1d26,#22263a)",
           borderBottom:`1px solid ${C.border}`,
-          padding:"18px 28px", display:"flex", alignItems:"center",
-          justifyContent:"space-between", boxShadow:"0 2px 16px rgba(0,0,0,0.3)",
+          padding:"16px 20px",
+          boxShadow:"0 2px 16px rgba(0,0,0,0.3)",
         }}>
-          <div style={{display:"flex", alignItems:"center", gap:"14px"}}>
-            <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+          <div className="header-inner">
+            <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
               <div style={{
                 width:"32px", height:"32px", borderRadius:"8px",
                 background:"linear-gradient(135deg,#e8a87c,#d4845a)",
                 display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:"16px", boxShadow:"0 2px 8px rgba(232,168,124,0.4)",
+                fontSize:"16px", boxShadow:"0 2px 8px rgba(232,168,124,0.4)", flexShrink:0,
               }}>📅</div>
-              <span style={{fontSize:"20px", letterSpacing:"0.08em", color:C.text, fontStyle:"italic"}}>
+              <span style={{fontSize:"18px", letterSpacing:"0.06em", color:C.text, fontStyle:"italic"}}>
                 {APP_TITLE}
               </span>
+              {badge && (
+                <span style={{
+                  fontSize:"9px", color:C.accent, letterSpacing:"0.14em",
+                  border:`1px solid ${C.accentBdr}`, background:C.accentDim,
+                  padding:"3px 8px", borderRadius:"20px", fontWeight:"700",
+                }}>{badge}</span>
+              )}
             </div>
-            {badge && (
-              <span style={{
-                fontSize:"10px", color:C.accent, letterSpacing:"0.14em",
-                border:`1px solid ${C.accentBdr}`, background:C.accentDim,
-                padding:"3px 10px", borderRadius:"20px", fontWeight:"700",
-              }}>{badge}</span>
-            )}
+            <button onClick={onAdmin} className="ghost-btn" style={{
+              background:"transparent", border:`1px solid ${C.border}`, color:C.textMid,
+              padding:"7px 14px", cursor:"pointer", fontSize:"11px", letterSpacing:"0.08em",
+              borderRadius:"7px", transition:"all 0.2s", whiteSpace:"nowrap", flexShrink:0,
+            }}>{label || "Admin"}</button>
           </div>
-          <button onClick={onAdmin} style={ghostBtnSt}>{label || "Admin"}</button>
         </div>
       );
     }
 
     function CalendarGrid({ year, month, onNav, renderDay }) {
-      const dim = getDaysInMonth(year, month);
-      const first = getFirstDay(year, month);
+      const dim = getDaysInMonth(year, month), first = getFirstDay(year, month);
       return (
         <div>
-          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"18px"}}>
-            <button onClick={() => onNav(-1)} style={navBtnSt}>‹</button>
-            <span style={{fontSize:"17px", color:C.text, letterSpacing:"0.04em"}}>
+          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"16px"}}>
+            <button onClick={() => onNav(-1)} style={{
+              background:C.surfaceHi, border:`1px solid ${C.border}`, color:C.textMid,
+              width:"34px", height:"34px", borderRadius:"50%", cursor:"pointer",
+              fontSize:"18px", display:"flex", alignItems:"center", justifyContent:"center",
+              padding:0, flexShrink:0,
+            }}>‹</button>
+            <span style={{fontSize:"16px", color:C.text, letterSpacing:"0.03em", textAlign:"center"}}>
               {MONTHS[month]} {year}
             </span>
-            <button onClick={() => onNav(1)} style={navBtnSt}>›</button>
+            <button onClick={() => onNav(1)} style={{
+              background:C.surfaceHi, border:`1px solid ${C.border}`, color:C.textMid,
+              width:"34px", height:"34px", borderRadius:"50%", cursor:"pointer",
+              fontSize:"18px", display:"flex", alignItems:"center", justifyContent:"center",
+              padding:0, flexShrink:0,
+            }}>›</button>
           </div>
-          <div style={{display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"4px"}}>
-            {DAYS.map(d => (
-              <div key={d} style={{textAlign:"center", fontSize:"10px", color:C.textSoft, letterSpacing:"0.1em", padding:"6px 0", textTransform:"uppercase", fontWeight:"700"}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"3px"}}>
+            {DAYS_SHORT.map(d => (
+              <div key={d} style={{textAlign:"center", fontSize:"10px", color:C.textSoft, letterSpacing:"0.08em", padding:"5px 0", textTransform:"uppercase", fontWeight:"700"}}>
                 {d}
               </div>
             ))}
-            {Array.from({length: first}).map((_,i) => <div key={"e"+i} />)}
-            {Array.from({length: dim}).map((_,i) => renderDay(i+1, dateKey(year, month, i+1)))}
+            {Array.from({length:first}).map((_,i) => <div key={"e"+i}/>)}
+            {Array.from({length:dim}).map((_,i) => renderDay(i+1, dateKey(year,month,i+1)))}
           </div>
         </div>
       );
@@ -185,55 +278,74 @@
     function TimeChip({ label, state, onClick }) {
       const s = {
         available:{ bg:C.greenDim, border:C.greenBdr, text:C.green },
-        selected: { bg:C.accentDim, border:C.accentBdr, text:C.accent },
+        selected: { bg:C.accentDim, border:C.accent, text:C.accent },
         booked:   { bg:C.slateDim, border:C.slateBdr, text:C.slate },
         on:       { bg:C.accentDim, border:C.accentBdr, text:C.accent },
         off:      { bg:"transparent", border:C.border, text:C.textSoft },
       }[state] || {};
       return (
         <div onClick={onClick} style={{
-          padding:"8px 10px", borderRadius:"8px",
+          padding:"8px 6px", borderRadius:"8px",
           border:`1px solid ${s.border}`, background:s.bg, color:s.text,
           fontSize:"12px", cursor:onClick?"pointer":"default",
-          textAlign:"center", transition:"all 0.13s", userSelect:"none",
-          lineHeight:1.3,
+          textAlign:"center", transition:"all 0.13s", userSelect:"none", lineHeight:1.3,
         }}>
           {label}
-          {state==="booked" && (
-            <div style={{fontSize:"9px", marginTop:"2px", letterSpacing:"0.07em", fontWeight:"700"}}>
-              FILLED
-            </div>
-          )}
+          {state==="booked" && <div style={{fontSize:"9px",marginTop:"2px",letterSpacing:"0.06em",fontWeight:"700"}}>FILLED</div>}
         </div>
       );
     }
 
     function BookingCard({ b, onDelete, past }) {
       return (
-        <div style={{...cardSt, opacity:past?0.55:1, borderLeft:`3px solid ${C.accent}`, marginBottom:"12px"}}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
-            <div>
-              <div style={{fontSize:"16px", color:C.text}}>{b.name}</div>
-              <div style={{fontSize:"13px", color:C.accent, marginTop:"5px", fontWeight:"600"}}>
+        <div style={{...cardSt, opacity:past?0.55:1, borderLeft:`3px solid ${C.accent}`, padding:"16px 18px"}}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"12px"}}>
+            <div style={{flex:1, minWidth:0}}>
+              <div style={{fontSize:"15px", color:C.text, fontWeight:"600"}}>{b.name}</div>
+              <div style={{fontSize:"13px", color:C.accent, marginTop:"4px"}}>
                 {formatDate(b.date)} · {b.time}
               </div>
-              {b.note && (
-                <div style={{fontSize:"13px", color:C.textMid, marginTop:"7px", fontStyle:"italic"}}>"{b.note}"</div>
+              {b.email && (
+                <div style={{fontSize:"12px", color:C.textMid, marginTop:"4px"}}>
+                  ✉ {b.email}
+                </div>
               )}
-              <div style={{fontSize:"11px", color:C.textSoft, marginTop:"8px"}}>
+              {b.note && <div style={{fontSize:"13px",color:C.textMid,marginTop:"6px",fontStyle:"italic"}}>"{b.note}"</div>}
+              <div style={{fontSize:"11px",color:C.textSoft,marginTop:"7px"}}>
                 Booked {new Date(b.bookedAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
+                {b.emailSent && <span style={{marginLeft:"8px",color:C.green,fontSize:"10px"}}>✉ notified</span>}
               </div>
             </div>
-            <button onClick={() => onDelete(b.id)} style={{
-              background:"transparent", border:"none", color:C.textSoft,
-              cursor:"pointer", fontSize:"20px", lineHeight:1, padding:0,
-            }}>×</button>
+            <button onClick={()=>onDelete(b.id)} style={{background:"transparent",border:"none",color:C.textSoft,cursor:"pointer",fontSize:"20px",lineHeight:1,padding:0,flexShrink:0}}>×</button>
           </div>
         </div>
       );
     }
 
-    // ── Main App ─────────────────────────────────────────────────────────────
+    // ── Send notification email via EmailJS ──────────────────────────────────
+    async function sendNotificationEmail(booking) {
+      if (!EMAIL_ENABLED) return false;
+      try {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email:      ORGANIZER_EMAIL,
+          booker_name:   booking.name,
+          booker_email:  booking.email || "not provided",
+          booking_date:  formatDate(booking.date),
+          booking_time:  booking.time,
+          booking_note:  booking.note || "none",
+          app_title:     APP_TITLE,
+        });
+        return true;
+      } catch (e) {
+        console.error("EmailJS error:", e);
+        return false;
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Main App
+    // ════════════════════════════════════════════════════════════════════════
     function App() {
       const today = new Date();
       const [view,         setView]         = useState("public");
@@ -243,16 +355,17 @@
       const [bookings,     setBookings]     = useState([]);
       const [loading,      setLoading]      = useState(true);
 
-      // Public
+      // Public booking state
       const [selectedDate, setSelectedDate] = useState(null);
       const [selectedTime, setSelectedTime] = useState(null);
       const [bookName,     setBookName]     = useState("");
+      const [bookEmail,    setBookEmail]    = useState("");
       const [bookNote,     setBookNote]     = useState("");
       const [bookStep,     setBookStep]     = useState("pick");
       const [bookError,    setBookError]    = useState("");
       const [bookLoading,  setBookLoading]  = useState(false);
 
-      // Admin
+      // Admin state
       const [password,      setPassword]      = useState("");
       const [passwordError, setPasswordError] = useState(false);
       const [adminYear,     setAdminYear]     = useState(today.getFullYear());
@@ -268,214 +381,195 @@
         setLoading(false);
       }, []);
 
-      function navMonth(dir, admin = false) {
-        const m = admin ? adminMonth : month;
-        const y = admin ? adminYear  : year;
-        const setM = admin ? setAdminMonth : setMonth;
-        const setY = admin ? setAdminYear  : setYear;
-        if (dir === 1) { if (m===11){setM(0);setY(y+1);}else setM(m+1); }
-        else           { if (m===0){setM(11);setY(y-1);}else setM(m-1); }
+      function navMonth(dir, admin=false) {
+        const m=admin?adminMonth:month, y=admin?adminYear:year;
+        const setM=admin?setAdminMonth:setMonth, setY=admin?setAdminYear:setYear;
+        if(dir===1){if(m===11){setM(0);setY(y+1);}else setM(m+1);}
+        else{if(m===0){setM(11);setY(y-1);}else setM(m-1);}
       }
 
-      const isBooked    = (date, time) => bookings.some(b => b.date===date && b.time===time);
-      const getOpenSlots = (date) => (availability[date]||[]).filter(t => !isBooked(date, t));
+      const isBooked    = (date,time) => bookings.some(b=>b.date===date&&b.time===time);
+      const getOpenSlots = (date) => (availability[date]||[]).filter(t=>!isBooked(date,t));
 
-      async function adminToggleTime(date, time) {
-        if (isBooked(date, time)) return;
-        const cur  = availability[date] || [];
-        const next = cur.includes(time) ? cur.filter(t=>t!==time) : [...cur, time];
-        const nextAv = {...availability};
-        if (next.length === 0) delete nextAv[date]; else nextAv[date] = next;
-        setAvailability(nextAv);
-        setSaving(true);
-        saveData("availability", nextAv);
-        setSaving(false);
+      function adminToggleTime(date,time) {
+        if(isBooked(date,time)) return;
+        const cur=availability[date]||[];
+        const next=cur.includes(time)?cur.filter(t=>t!==time):[...cur,time];
+        const nextAv={...availability};
+        if(next.length===0) delete nextAv[date]; else nextAv[date]=next;
+        setAvailability(nextAv); setSaving(true);
+        saveData("availability",nextAv); setSaving(false);
       }
 
       function adminToggleDay(date) {
-        if (isDatePast(date)) return;
-        const cur = availability[date] || [];
-        const bookedTimes = TIME_SLOTS.filter(t => isBooked(date, t));
-        const allOn = TIME_SLOTS.every(t => isBooked(date,t) || cur.includes(t));
-        const next  = allOn ? bookedTimes : [...new Set([...bookedTimes, ...TIME_SLOTS])];
-        const nextAv = {...availability};
-        if (next.length === 0) delete nextAv[date]; else nextAv[date] = next;
-        setAvailability(nextAv);
-        setSaving(true);
-        saveData("availability", nextAv);
-        setSaving(false);
+        if(isDatePast(date)) return;
+        const cur=availability[date]||[];
+        const bookedTimes=TIME_SLOTS.filter(t=>isBooked(date,t));
+        const allOn=TIME_SLOTS.every(t=>isBooked(date,t)||cur.includes(t));
+        const next=allOn?bookedTimes:[...new Set([...bookedTimes,...TIME_SLOTS])];
+        const nextAv={...availability};
+        if(next.length===0) delete nextAv[date]; else nextAv[date]=next;
+        setAvailability(nextAv); setSaving(true);
+        saveData("availability",nextAv); setSaving(false);
       }
 
       function deleteBooking(id) {
-        const updated = bookings.filter(b => b.id !== id);
-        setBookings(updated);
-        saveData("bookings", updated);
+        const updated=bookings.filter(b=>b.id!==id);
+        setBookings(updated); saveData("bookings",updated);
       }
 
-      function confirmBooking() {
-        if (!bookName.trim()) { setBookError("Please enter your name."); return; }
-        if (isBooked(selectedDate, selectedTime)) {
+      async function confirmBooking() {
+        if(!bookName.trim()){setBookError("Please enter your name.");return;}
+        if(isBooked(selectedDate,selectedTime)){
           setBookError("This slot was just taken. Please choose another.");
-          setBookStep("pick"); return;
+          setBookStep("pick");return;
         }
         setBookLoading(true);
-        const entry = {
-          id: Date.now().toString(),
-          date: selectedDate, time: selectedTime,
-          name: bookName.trim(), note: bookNote.trim(),
-          bookedAt: new Date().toISOString(),
+        const entry={
+          id:Date.now().toString(),
+          date:selectedDate, time:selectedTime,
+          name:bookName.trim(), email:bookEmail.trim(), note:bookNote.trim(),
+          bookedAt:new Date().toISOString(),
+          emailSent:false,
         };
-        const updated = [...bookings, entry];
-        setBookings(updated);
-        saveData("bookings", updated);
-        setBookLoading(false);
-        setBookStep("done");
+        // Send notification email
+        const sent = await sendNotificationEmail(entry);
+        entry.emailSent = sent;
+
+        const updated=[...bookings,entry];
+        setBookings(updated); saveData("bookings",updated);
+        setBookLoading(false); setBookStep("done");
       }
 
-      const appWrap  = { minHeight:"100vh", background:C.bg, color:C.text };
-      const mainWrap = { maxWidth:"920px", margin:"0 auto", padding:"36px 24px" };
+      const appWrap={minHeight:"100vh",background:C.bg,color:C.text};
 
-      // ── Login ──────────────────────────────────────────────────────────────
-      if (view === "login") return (
+      // ── Login ────────────────────────────────────────────────────────────
+      if(view==="login") return(
         <div style={appWrap}>
-          <Header label="← Back" onAdmin={() => { setView("public"); setPassword(""); setPasswordError(false); }} />
-          <div style={{maxWidth:"400px", margin:"70px auto", padding:"0 24px"}}>
-            <div style={{...cardSt, padding:"32px"}}>
+          <Header label="← Back" onAdmin={()=>{setView("public");setPassword("");setPasswordError(false);}}/>
+          <div style={{maxWidth:"400px",margin:"50px auto",padding:"0 20px"}}>
+            <div style={{...cardSt,padding:"28px"}}>
               <div style={{
-                width:"44px", height:"44px", borderRadius:"12px",
+                width:"44px",height:"44px",borderRadius:"12px",
                 background:"linear-gradient(135deg,#e8a87c,#d4845a)",
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:"20px", marginBottom:"20px",
-                boxShadow:"0 4px 14px rgba(232,168,124,0.4)",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:"20px",marginBottom:"18px",
               }}>🔒</div>
-              <h2 style={{fontSize:"22px", fontWeight:"normal", marginBottom:"6px", color:C.text}}>Admin Access</h2>
-              <p style={{color:C.textMid, fontSize:"14px", marginBottom:"22px", lineHeight:1.7}}>
+              <h2 style={{fontSize:"21px",fontWeight:"normal",marginBottom:"6px",color:C.text}}>Admin Access</h2>
+              <p style={{color:C.textMid,fontSize:"14px",marginBottom:"20px",lineHeight:1.6}}>
                 Manage availability and view all bookings.
               </p>
-              <input
-                style={{...inputSt, marginBottom:"12px"}}
-                type="password" placeholder="Enter password"
-                value={password} onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === "Enter") {
-                    if (password === ADMIN_PASSWORD) { setPasswordError(false); setView("admin"); }
+              <input style={{...inputSt,marginBottom:"12px"}} type="password" placeholder="Enter password"
+                value={password} onChange={e=>setPassword(e.target.value)}
+                onKeyDown={e=>{
+                  if(e.key==="Enter"){
+                    if(password===ADMIN_PASSWORD){setPasswordError(false);setView("admin");}
                     else setPasswordError(true);
                   }
-                }}
-              />
-              {passwordError && <p style={{color:C.red, fontSize:"13px", marginBottom:"12px"}}>Incorrect password.</p>}
-              <button style={primaryBtnSt(false)} onClick={() => {
-                if (password === ADMIN_PASSWORD) { setPasswordError(false); setView("admin"); }
+                }}/>
+              {passwordError&&<p style={{color:C.red,fontSize:"13px",marginBottom:"12px"}}>Incorrect password.</p>}
+              <button className="primary-btn" style={{
+                background:"linear-gradient(135deg,#e8a87c,#d4845a)",border:"none",
+                color:"#1e1a14",padding:"13px 0",fontSize:"14px",letterSpacing:"0.06em",
+                cursor:"pointer",borderRadius:"9px",fontWeight:"600",
+                boxShadow:"0 4px 16px rgba(232,168,124,0.35)",width:"100%",
+                transition:"all 0.2s",
+              }} onClick={()=>{
+                if(password===ADMIN_PASSWORD){setPasswordError(false);setView("admin");}
                 else setPasswordError(true);
               }}>Enter Admin</button>
             </div>
-            <p style={{color:C.textSoft, fontSize:"12px", marginTop:"14px", textAlign:"center"}}>
-              Default password: admin123
-            </p>
+            <p style={{color:C.textSoft,fontSize:"12px",marginTop:"12px",textAlign:"center"}}>Default: admin123</p>
           </div>
         </div>
       );
 
-      // ── Admin ──────────────────────────────────────────────────────────────
-      if (view === "admin") {
-        const upcoming = bookings
-          .filter(b => !isDatePast(b.date))
-          .sort((a,b) => a.date.localeCompare(b.date) || TIME_SLOTS.indexOf(a.time) - TIME_SLOTS.indexOf(b.time));
-        const past = bookings.filter(b => isDatePast(b.date));
-        const monthDates = Array.from(
-          {length: getDaysInMonth(adminYear, adminMonth)},
-          (_,i) => dateKey(adminYear, adminMonth, i+1)
-        );
+      // ── Admin ────────────────────────────────────────────────────────────
+      if(view==="admin"){
+        const upcoming=bookings.filter(b=>!isDatePast(b.date)).sort((a,b)=>a.date.localeCompare(b.date)||TIME_SLOTS.indexOf(a.time)-TIME_SLOTS.indexOf(b.time));
+        const past=bookings.filter(b=>isDatePast(b.date));
+        const monthDates=Array.from({length:getDaysInMonth(adminYear,adminMonth)},(_,i)=>dateKey(adminYear,adminMonth,i+1));
 
-        return (
+        return(
           <div style={appWrap}>
-            <Header badge="ADMIN" label="← Exit Admin" onAdmin={() => { setView("public"); setPassword(""); }} />
-            <div style={mainWrap}>
-              <div style={{marginBottom:"28px"}}>
-                <h2 style={{fontSize:"26px", fontWeight:"normal", marginBottom:"4px", color:C.text}}>
+            <Header badge="ADMIN" label="← Exit" onAdmin={()=>{setView("public");setPassword("");}}/>
+            <div className="main-wrap">
+              <div style={{marginBottom:"24px"}}>
+                <h2 style={{fontSize:"24px",fontWeight:"normal",marginBottom:"4px",color:C.text}}>
                   Admin Panel
-                  {saving && <span style={{fontSize:"13px", color:C.textSoft, fontStyle:"italic", marginLeft:"10px"}}>saving…</span>}
+                  {saving&&<span style={{fontSize:"12px",color:C.textSoft,fontStyle:"italic",marginLeft:"10px"}}>saving…</span>}
                 </h2>
-                <p style={{color:C.textMid, fontSize:"14px", lineHeight:1.7}}>
-                  Toggle dates and times. Booked slots lock automatically.
-                </p>
+                <p style={{color:C.textMid,fontSize:"14px",lineHeight:1.6}}>Toggle dates and times below.</p>
+                {!EMAIL_ENABLED&&(
+                  <div style={{marginTop:"12px",padding:"10px 14px",borderRadius:"8px",background:"rgba(232,168,124,0.08)",border:`1px solid ${C.accentBdr}`,fontSize:"12px",color:C.textMid}}>
+                    ⚠️ Email notifications are not configured yet. See README for setup instructions.
+                  </div>
+                )}
               </div>
 
               {/* Tabs */}
-              <div style={{display:"flex", borderBottom:`1px solid ${C.border}`, marginBottom:"28px"}}>
-                {["calendar","bookings"].map(t => (
-                  <button key={t} onClick={() => setAdminTab(t)} style={{
-                    background:"transparent", border:"none",
-                    color: adminTab===t ? C.accent : C.textSoft,
-                    fontSize:"12px", letterSpacing:"0.1em", textTransform:"uppercase",
-                    padding:"10px 22px", cursor:"pointer",
-                    borderBottom: adminTab===t ? `2px solid ${C.accent}` : "2px solid transparent",
-                    marginBottom:"-1px", fontWeight:"700",
-                  }}>
-                    {t}{t==="bookings" ? ` (${bookings.length})` : ""}
-                  </button>
+              <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,marginBottom:"24px",overflowX:"auto"}}>
+                {["calendar","bookings"].map(t=>(
+                  <button key={t} onClick={()=>setAdminTab(t)} style={{
+                    background:"transparent",border:"none",
+                    color:adminTab===t?C.accent:C.textSoft,
+                    fontSize:"12px",letterSpacing:"0.1em",textTransform:"uppercase",
+                    padding:"10px 18px",cursor:"pointer",
+                    borderBottom:adminTab===t?`2px solid ${C.accent}`:"2px solid transparent",
+                    marginBottom:"-1px",fontWeight:"700",whiteSpace:"nowrap",
+                  }}>{t}{t==="bookings"?` (${bookings.length})`:""}</button>
                 ))}
               </div>
 
-              {adminTab === "calendar" && (
-                <div style={{display:"grid", gridTemplateColumns:"290px 1fr", gap:"32px", alignItems:"start"}}>
-                  {/* Calendar picker */}
+              {adminTab==="calendar"&&(
+                <div className="admin-two-col">
                   <div>
                     <span style={labelSt}>Click a day to toggle all slots</span>
-                    <div style={{...cardSt, padding:"20px"}}>
-                      <CalendarGrid year={adminYear} month={adminMonth} onNav={d => navMonth(d, true)} renderDay={(day, key) => {
-                        const isPast = isDatePast(key);
-                        const slots  = availability[key] || [];
-                        const open   = slots.filter(t => !isBooked(key,t)).length;
-                        const total  = slots.length;
-                        let bg="transparent", border=`1px solid transparent`, color=isPast ? C.textSoft+"33" : C.textSoft;
-                        if (!isPast && total > 0) { bg=C.accentDim; border=`1px solid ${C.accentBdr}`; color=C.accent; }
-                        return (
-                          <div key={day} onClick={() => !isPast && adminToggleDay(key)} style={{
-                            aspectRatio:"1", display:"flex", flexDirection:"column", alignItems:"center",
-                            justifyContent:"center", borderRadius:"8px",
-                            cursor:isPast?"default":"pointer", background:bg, border, color,
-                            fontSize:"13px", userSelect:"none", transition:"all 0.15s",
+                    <div style={{...cardSt,padding:"18px"}}>
+                      <CalendarGrid year={adminYear} month={adminMonth} onNav={d=>navMonth(d,true)} renderDay={(day,key)=>{
+                        const isPast=isDatePast(key);
+                        const slots=availability[key]||[];
+                        const open=slots.filter(t=>!isBooked(key,t)).length;
+                        const total=slots.length;
+                        let bg="transparent",border=`1px solid transparent`,color=isPast?C.textSoft+"33":C.textSoft;
+                        if(!isPast&&total>0){bg=C.accentDim;border=`1px solid ${C.accentBdr}`;color=C.accent;}
+                        return(
+                          <div key={day} onClick={()=>!isPast&&adminToggleDay(key)} style={{
+                            aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",
+                            justifyContent:"center",borderRadius:"7px",
+                            cursor:isPast?"default":"pointer",background:bg,border,color,
+                            fontSize:"13px",userSelect:"none",transition:"all 0.15s",
                           }}>
                             {day}
-                            {!isPast && total > 0 && (
-                              <div style={{fontSize:"9px", marginTop:"2px", color:C.accent, fontWeight:"700"}}>
-                                {open} open
-                              </div>
-                            )}
+                            {!isPast&&total>0&&<div style={{fontSize:"8px",marginTop:"2px",color:C.accent,fontWeight:"700"}}>{open}✓</div>}
                           </div>
                         );
-                      }} />
+                      }}/>
                     </div>
                   </div>
 
-                  {/* Slot editor */}
                   <div>
-                    <span style={labelSt}>Fine-tune individual slots — {MONTHS[adminMonth]}</span>
-                    {monthDates.filter(d => !isDatePast(d)).length === 0 ? (
-                      <p style={{color:C.textSoft, fontSize:"14px"}}>No upcoming dates this month.</p>
-                    ) : (
-                      monthDates.filter(d => !isDatePast(d)).map(d => {
-                        const slots = availability[d] || [];
-                        return (
-                          <div key={d} style={{marginBottom:"18px"}}>
-                            <div style={{fontSize:"13px", color:C.textMid, marginBottom:"9px", fontWeight:"600"}}>
-                              {formatDate(d)}
-                            </div>
-                            <div style={{display:"flex", flexWrap:"wrap", gap:"6px"}}>
-                              {TIME_SLOTS.map(t => {
-                                const on = slots.includes(t), bk = isBooked(d, t);
-                                return (
-                                  <div key={t} onClick={() => adminToggleTime(d, t)} style={{
-                                    padding:"5px 11px", borderRadius:"6px", fontSize:"12px",
-                                    cursor:bk?"default":"pointer", userSelect:"none", transition:"all 0.13s",
-                                    background: bk ? C.slateDim : on ? C.accentDim : "transparent",
-                                    border:`1px solid ${bk ? C.slateBdr : on ? C.accentBdr : C.border}`,
-                                    color: bk ? C.slate : on ? C.accent : C.textSoft,
-                                    fontWeight: on ? "600" : "normal",
-                                  }}>
-                                    {t}{bk ? " ✓" : ""}
-                                  </div>
+                    <span style={labelSt}>Fine-tune slots — {MONTHS[adminMonth]}</span>
+                    {monthDates.filter(d=>!isDatePast(d)).length===0?(
+                      <p style={{color:C.textSoft,fontSize:"14px"}}>No upcoming dates this month.</p>
+                    ):(
+                      monthDates.filter(d=>!isDatePast(d)).map(d=>{
+                        const slots=availability[d]||[];
+                        return(
+                          <div key={d} style={{marginBottom:"16px"}}>
+                            <div style={{fontSize:"13px",color:C.textMid,marginBottom:"8px",fontWeight:"600"}}>{formatDate(d)}</div>
+                            <div className="slot-pills">
+                              {TIME_SLOTS.map(t=>{
+                                const on=slots.includes(t),bk=isBooked(d,t);
+                                return(
+                                  <div key={t} onClick={()=>adminToggleTime(d,t)} style={{
+                                    padding:"5px 10px",borderRadius:"6px",fontSize:"12px",
+                                    cursor:bk?"default":"pointer",userSelect:"none",transition:"all 0.13s",
+                                    background:bk?C.slateDim:on?C.accentDim:"transparent",
+                                    border:`1px solid ${bk?C.slateBdr:on?C.accentBdr:C.border}`,
+                                    color:bk?C.slate:on?C.accent:C.textSoft,
+                                    fontWeight:on?"600":"normal",
+                                  }}>{t}{bk?" ✓":""}</div>
                                 );
                               })}
                             </div>
@@ -487,29 +581,23 @@
                 </div>
               )}
 
-              {adminTab === "bookings" && (
+              {adminTab==="bookings"&&(
                 <div>
-                  {bookings.length === 0 ? (
-                    <div style={{...cardSt, textAlign:"center", padding:"56px"}}>
-                      <div style={{fontSize:"36px", marginBottom:"14px"}}>📭</div>
-                      <p style={{color:C.textSoft, fontSize:"15px"}}>No bookings yet.</p>
+                  {bookings.length===0?(
+                    <div style={{...cardSt,textAlign:"center",padding:"48px"}}>
+                      <div style={{fontSize:"34px",marginBottom:"12px"}}>📭</div>
+                      <p style={{color:C.textSoft,fontSize:"15px"}}>No bookings yet.</p>
                     </div>
-                  ) : (
-                    <>
-                      {upcoming.length > 0 && (
-                        <>
-                          <span style={labelSt}>Upcoming ({upcoming.length})</span>
-                          {upcoming.map(b => <BookingCard key={b.id} b={b} onDelete={deleteBooking} />)}
-                        </>
-                      )}
-                      {past.length > 0 && (
-                        <>
-                          <span style={{...labelSt, marginTop:"28px", display:"block"}}>Past ({past.length})</span>
-                          {past.map(b => <BookingCard key={b.id} b={b} onDelete={deleteBooking} past />)}
-                        </>
-                      )}
-                    </>
-                  )}
+                  ):(<>
+                    {upcoming.length>0&&(<>
+                      <span style={labelSt}>Upcoming ({upcoming.length})</span>
+                      {upcoming.map(b=><BookingCard key={b.id} b={b} onDelete={deleteBooking}/>)}
+                    </>)}
+                    {past.length>0&&(<>
+                      <span style={{...labelSt,marginTop:"24px",display:"block"}}>Past ({past.length})</span>
+                      {past.map(b=><BookingCard key={b.id} b={b} onDelete={deleteBooking} past/>)}
+                    </>)}
+                  </>)}
                 </div>
               )}
             </div>
@@ -517,155 +605,162 @@
         );
       }
 
-      // ── Public: done ───────────────────────────────────────────────────────
-      if (bookStep === "done") return (
+      // ── Public: done ─────────────────────────────────────────────────────
+      if(bookStep==="done") return(
         <div style={appWrap}>
-          <Header onAdmin={() => setView("login")} />
-          <div style={{maxWidth:"460px", margin:"70px auto", padding:"0 24px", textAlign:"center"}}>
+          <Header onAdmin={()=>setView("login")}/>
+          <div style={{maxWidth:"440px",margin:"60px auto",padding:"0 20px",textAlign:"center"}}>
             <div style={{
-              width:"70px", height:"70px", borderRadius:"50%",
-              background:C.greenDim, border:`2px solid ${C.greenBdr}`,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:"32px", margin:"0 auto 20px",
+              width:"68px",height:"68px",borderRadius:"50%",
+              background:C.greenDim,border:`2px solid ${C.greenBdr}`,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:"30px",margin:"0 auto 18px",
             }}>✓</div>
-            <h2 style={{fontSize:"28px", fontWeight:"normal", marginBottom:"10px", color:C.text}}>You're booked!</h2>
-            <p style={{color:C.textMid, fontSize:"15px", lineHeight:1.8, marginBottom:"4px"}}>
+            <h2 style={{fontSize:"26px",fontWeight:"normal",marginBottom:"10px",color:C.text}}>You're booked!</h2>
+            <p style={{color:C.textMid,fontSize:"15px",lineHeight:1.8,marginBottom:"4px"}}>
               <em style={{color:C.accent}}>{bookName}</em>, you're confirmed for:
             </p>
             <div style={{
-              ...cardSt, display:"inline-block", padding:"22px 40px",
-              margin:"16px 0 28px", textAlign:"center",
-              borderColor:C.accentBdr, background:C.accentDim,
+              ...cardSt,padding:"20px 32px",margin:"14px 0 22px",
+              textAlign:"center",borderColor:C.accentBdr,background:C.accentDim,
             }}>
-              <div style={{fontSize:"15px", color:C.textMid}}>{formatDate(selectedDate)}</div>
-              <div style={{fontSize:"28px", color:C.accent, marginTop:"8px"}}>{selectedTime}</div>
+              <div style={{fontSize:"15px",color:C.textMid}}>{formatDate(selectedDate)}</div>
+              <div style={{fontSize:"26px",color:C.accent,marginTop:"8px"}}>{selectedTime}</div>
             </div>
-            <p style={{color:C.textSoft, fontSize:"13px"}}>The organizer will be in touch shortly.</p>
-            <button
-              style={{...primaryBtnSt(false), marginTop:"24px", width:"auto", padding:"13px 30px"}}
-              onClick={() => {
-                setBookStep("pick"); setSelectedDate(null); setSelectedTime(null);
-                setBookName(""); setBookNote("");
-              }}
-            >Book Another Slot</button>
+            {EMAIL_ENABLED&&(
+              <p style={{color:C.textSoft,fontSize:"13px",marginBottom:"8px"}}>
+                📧 The organizer has been notified of your booking.
+              </p>
+            )}
+            <p style={{color:C.textSoft,fontSize:"13px"}}>They will be in touch with any details.</p>
+            <button className="primary-btn" style={{
+              background:"linear-gradient(135deg,#e8a87c,#d4845a)",border:"none",
+              color:"#1e1a14",padding:"13px 28px",fontSize:"14px",letterSpacing:"0.06em",
+              cursor:"pointer",borderRadius:"9px",fontWeight:"600",
+              boxShadow:"0 4px 16px rgba(232,168,124,0.35)",
+              transition:"all 0.2s",marginTop:"22px",
+            }} onClick={()=>{
+              setBookStep("pick");setSelectedDate(null);setSelectedTime(null);
+              setBookName("");setBookEmail("");setBookNote("");
+            }}>Book Another Slot</button>
           </div>
         </div>
       );
 
-      // ── Public: confirm ────────────────────────────────────────────────────
-      if (bookStep === "confirm") return (
+      // ── Public: confirm ───────────────────────────────────────────────────
+      if(bookStep==="confirm") return(
         <div style={appWrap}>
-          <Header onAdmin={() => setView("login")} />
-          <div style={{maxWidth:"460px", margin:"40px auto", padding:"0 28px"}}>
-            <button
-              onClick={() => { setBookStep("pick"); setBookError(""); }}
-              style={{background:"transparent", border:"none", color:C.textMid, cursor:"pointer", fontSize:"13px", marginBottom:"22px", padding:0, letterSpacing:"0.04em"}}
-            >← Back to calendar</button>
-            <h2 style={{fontSize:"24px", fontWeight:"normal", marginBottom:"18px", color:C.text}}>Confirm your booking</h2>
-            <div style={{...cardSt, marginBottom:"22px", background:C.accentDim, borderColor:C.accentBdr}}>
-              <div style={{fontSize:"14px", color:C.textMid}}>{formatDate(selectedDate)}</div>
-              <div style={{fontSize:"28px", color:C.accent, marginTop:"6px"}}>{selectedTime}</div>
+          <Header onAdmin={()=>setView("login")}/>
+          <div style={{maxWidth:"460px",margin:"30px auto",padding:"0 20px"}}>
+            <button onClick={()=>{setBookStep("pick");setBookError("");}} style={{
+              background:"transparent",border:"none",color:C.textMid,
+              cursor:"pointer",fontSize:"13px",marginBottom:"20px",padding:0,
+            }}>← Back to calendar</button>
+            <h2 style={{fontSize:"22px",fontWeight:"normal",marginBottom:"16px",color:C.text}}>Confirm your booking</h2>
+            <div style={{...cardSt,marginBottom:"20px",background:C.accentDim,borderColor:C.accentBdr,padding:"18px 20px"}}>
+              <div style={{fontSize:"14px",color:C.textMid}}>{formatDate(selectedDate)}</div>
+              <div style={{fontSize:"26px",color:C.accent,marginTop:"6px"}}>{selectedTime}</div>
             </div>
+
             <label style={labelSt}>Your Name *</label>
-            <input style={{...inputSt, marginBottom:"16px"}} placeholder="Enter your name"
-              value={bookName} onChange={e => setBookName(e.target.value)} />
+            <input style={{...inputSt,marginBottom:"14px"}} placeholder="Enter your name"
+              value={bookName} onChange={e=>setBookName(e.target.value)}/>
+
+            <label style={labelSt}>Your Email {EMAIL_ENABLED?"(recommended — organizer will see this)":"(optional)"}</label>
+            <input style={{...inputSt,marginBottom:"14px"}} type="email" placeholder="your@email.com"
+              value={bookEmail} onChange={e=>setBookEmail(e.target.value)}/>
+
             <label style={labelSt}>Note for organizer (optional)</label>
-            <textarea style={{...inputSt, minHeight:"80px", marginBottom:"20px"}}
+            <textarea style={{...inputSt,minHeight:"75px",marginBottom:"20px"}}
               placeholder="Anything you'd like to add?"
-              value={bookNote} onChange={e => setBookNote(e.target.value)} />
-            {bookError && <p style={{color:C.red, fontSize:"13px", marginBottom:"14px"}}>{bookError}</p>}
-            <button style={primaryBtnSt(bookLoading)} onClick={confirmBooking} disabled={bookLoading}>
-              {bookLoading ? "Confirming…" : "Confirm Booking"}
+              value={bookNote} onChange={e=>setBookNote(e.target.value)}/>
+
+            {bookError&&<p style={{color:C.red,fontSize:"13px",marginBottom:"14px"}}>{bookError}</p>}
+
+            <button className="primary-btn" style={{
+              background:bookLoading?C.surfaceHi:"linear-gradient(135deg,#e8a87c,#d4845a)",
+              border:bookLoading?`1px solid ${C.border}`:"none",
+              color:bookLoading?C.slate:"#1e1a14",
+              padding:"13px 0",fontSize:"14px",letterSpacing:"0.06em",
+              cursor:bookLoading?"not-allowed":"pointer",borderRadius:"9px",fontWeight:"600",
+              boxShadow:bookLoading?"none":"0 4px 16px rgba(232,168,124,0.35)",
+              width:"100%",transition:"all 0.2s",
+            }} onClick={confirmBooking} disabled={bookLoading}>
+              {bookLoading?"Confirming…":"Confirm Booking"}
             </button>
           </div>
         </div>
       );
 
-      // ── Public: main picker ────────────────────────────────────────────────
-      if (loading) return (
-        <div style={{...appWrap, display:"flex", alignItems:"center", justifyContent:"center"}}>
+      // ── Public: main picker ───────────────────────────────────────────────
+      if(loading) return(
+        <div style={{...appWrap,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <p style={{color:C.textSoft}}>Loading…</p>
         </div>
       );
 
-      const dateSlots = selectedDate ? (availability[selectedDate] || []) : [];
-      const openSlots = selectedDate ? getOpenSlots(selectedDate) : [];
+      const dateSlots=selectedDate?(availability[selectedDate]||[]):[];
+      const openSlots=selectedDate?getOpenSlots(selectedDate):[];
 
-      return (
+      return(
         <div style={appWrap}>
-          <Header onAdmin={() => setView("login")} />
+          <Header onAdmin={()=>setView("login")}/>
 
-          {/* Hero strip */}
-          <div style={{
-            background:"linear-gradient(to right,#1a1d26,#22253a)",
-            borderBottom:`1px solid ${C.border}`, padding:"28px 32px",
-          }}>
-            <div style={{maxWidth:"920px", margin:"0 auto"}}>
-              <h1 style={{fontSize:"28px", fontWeight:"normal", marginBottom:"6px", color:C.text, letterSpacing:"0.02em"}}>
+          {/* Hero */}
+          <div style={{background:"linear-gradient(to right,#1a1d26,#22253a)",borderBottom:`1px solid ${C.border}`,padding:"22px 20px"}}>
+            <div className="hero-inner">
+              <h1 style={{fontSize:"24px",fontWeight:"normal",marginBottom:"5px",color:C.text,letterSpacing:"0.02em"}}>
                 Book a time
               </h1>
-              <p style={{color:C.textMid, fontSize:"14px", lineHeight:1.7}}>
-                Select an available date, then choose your preferred time slot.
+              <p style={{color:C.textMid,fontSize:"14px",lineHeight:1.6}}>
+                Select an available date, then choose a time slot.
               </p>
             </div>
           </div>
 
-          <div style={mainWrap}>
-            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"28px", alignItems:"start"}}>
+          <div className="main-wrap">
+            <div className="two-col">
 
               {/* Calendar */}
               <div>
                 <span style={labelSt}>1 — Choose a date</span>
-                <div style={{...cardSt, padding:"22px"}}>
-                  <CalendarGrid year={year} month={month} onNav={d => navMonth(d, false)} renderDay={(day, key) => {
-                    const isPast = isDatePast(key);
-                    const open   = getOpenSlots(key).length;
-                    const total  = (availability[key] || []).length;
-                    const isSel  = key === selectedDate;
-                    let bg="transparent", border=`1px solid transparent`, color=isPast ? C.textSoft+"44" : C.textSoft;
-
-                    if (!isPast) {
-                      if (isSel)         { bg=`linear-gradient(135deg,#e8a87c,#d4845a)`; border="none"; color="#1e1a14"; }
-                      else if (open > 0) { bg=C.greenDim; border=`1px solid ${C.greenBdr}`; color=C.green; }
-                      else if (total>0)  { bg=C.slateDim; border=`1px solid ${C.slateBdr}`; color=C.slate; }
+                <div style={{...cardSt,padding:"18px"}}>
+                  <CalendarGrid year={year} month={month} onNav={d=>navMonth(d,false)} renderDay={(day,key)=>{
+                    const isPast=isDatePast(key);
+                    const open=getOpenSlots(key).length;
+                    const total=(availability[key]||[]).length;
+                    const isSel=key===selectedDate;
+                    let bg="transparent",border=`1px solid transparent`,color=isPast?C.textSoft+"44":C.textSoft;
+                    if(!isPast){
+                      if(isSel)        {bg="linear-gradient(135deg,#e8a87c,#d4845a)";border="none";color="#1e1a14";}
+                      else if(open>0)  {bg=C.greenDim;border=`1px solid ${C.greenBdr}`;color=C.green;}
+                      else if(total>0) {bg=C.slateDim;border=`1px solid ${C.slateBdr}`;color=C.slate;}
                     }
-
-                    return (
-                      <div key={day}
-                        onClick={() => !isPast && open > 0 && setSelectedDate(isSel ? null : key)}
-                        style={{
-                          aspectRatio:"1", display:"flex", flexDirection:"column", alignItems:"center",
-                          justifyContent:"center", borderRadius:"8px",
-                          cursor: (!isPast && open > 0) ? "pointer" : "default",
-                          background:bg, border:(!isPast && isSel) ? "none" : border,
-                          color:isSel ? "#1e1a14" : color,
-                          fontSize:"13px", userSelect:"none", transition:"all 0.15s",
-                          boxShadow:isSel ? "0 4px 14px rgba(232,168,124,0.4)" : "none",
-                          fontWeight:isSel ? "700" : "normal",
-                        }}
-                      >
+                    return(
+                      <div key={day} onClick={()=>!isPast&&open>0&&setSelectedDate(isSel?null:key)} style={{
+                        aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",
+                        justifyContent:"center",borderRadius:"7px",
+                        cursor:(!isPast&&open>0)?"pointer":"default",
+                        background:bg,border:(!isPast&&isSel)?"none":border,
+                        color:isSel?"#1e1a14":color,
+                        fontSize:"13px",userSelect:"none",transition:"all 0.15s",
+                        boxShadow:isSel?"0 4px 14px rgba(232,168,124,0.4)":"none",
+                        fontWeight:isSel?"700":"normal",
+                      }}>
                         {day}
-                        {!isPast && open > 0 && !isSel && (
-                          <div style={{width:"5px", height:"5px", borderRadius:"50%", background:C.green, marginTop:"3px"}} />
-                        )}
-                        {!isPast && total > 0 && open === 0 && (
-                          <div style={{fontSize:"9px", color:C.slate, marginTop:"2px", fontWeight:"700", letterSpacing:"0.05em"}}>
-                            FULL
-                          </div>
-                        )}
+                        {!isPast&&open>0&&!isSel&&<div style={{width:"4px",height:"4px",borderRadius:"50%",background:C.green,marginTop:"3px"}}/>}
+                        {!isPast&&total>0&&open===0&&<div style={{fontSize:"8px",color:C.slate,marginTop:"2px",fontWeight:"700"}}>FULL</div>}
                       </div>
                     );
-                  }} />
+                  }}/>
                 </div>
-
-                {/* Legend */}
-                <div style={{display:"flex", gap:"18px", marginTop:"14px", flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:"14px",marginTop:"12px",flexWrap:"wrap"}}>
                   {[
-                    {bg:C.greenDim, bdr:C.greenBdr, dot:C.green, label:"Available"},
-                    {bg:C.slateDim, bdr:C.slateBdr, dot:C.slate, label:"Fully booked"},
-                  ].map(({bg,bdr,dot,label}) => (
-                    <div key={label} style={{display:"flex", alignItems:"center", gap:"8px", fontSize:"12px"}}>
-                      <div style={{width:"11px", height:"11px", borderRadius:"3px", background:bg, border:`1px solid ${bdr}`}} />
+                    {bg:C.greenDim,bdr:C.greenBdr,dot:C.green,label:"Available"},
+                    {bg:C.slateDim,bdr:C.slateBdr,dot:C.slate,label:"Fully booked"},
+                  ].map(({bg,bdr,dot,label})=>(
+                    <div key={label} style={{display:"flex",alignItems:"center",gap:"7px",fontSize:"12px"}}>
+                      <div style={{width:"10px",height:"10px",borderRadius:"3px",background:bg,border:`1px solid ${bdr}`}}/>
                       <span style={{color:dot}}>{label}</span>
                     </div>
                   ))}
@@ -675,56 +770,51 @@
               {/* Time slots */}
               <div>
                 <span style={labelSt}>2 — Choose a time</span>
-                {!selectedDate ? (
-                  <div style={{...cardSt, textAlign:"center", padding:"48px 24px"}}>
+                {!selectedDate?(
+                  <div style={{...cardSt,textAlign:"center",padding:"40px 20px"}}>
                     <div style={{
-                      width:"52px", height:"52px", borderRadius:"50%",
-                      background:C.accentDim, border:`1px solid ${C.accentBdr}`,
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      fontSize:"24px", margin:"0 auto 16px",
+                      width:"50px",height:"50px",borderRadius:"50%",
+                      background:C.accentDim,border:`1px solid ${C.accentBdr}`,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:"22px",margin:"0 auto 14px",
                     }}>👆</div>
-                    <p style={{color:C.textMid, fontSize:"14px", lineHeight:1.7}}>
-                      Pick a highlighted date on the calendar to see available times.
+                    <p style={{color:C.textMid,fontSize:"14px",lineHeight:1.7}}>
+                      Pick a highlighted date to see available times.
                     </p>
                   </div>
-                ) : (
+                ):(
                   <div style={cardSt}>
-                    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"18px"}}>
-                      <p style={{color:C.text, fontSize:"15px", fontWeight:"600"}}>{formatDate(selectedDate)}</p>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
+                      <p style={{color:C.text,fontSize:"15px",fontWeight:"600"}}>{formatDate(selectedDate)}</p>
                       <span style={{
-                        fontSize:"12px", color:C.green,
-                        background:C.greenDim, border:`1px solid ${C.greenBdr}`,
-                        padding:"3px 10px", borderRadius:"20px", fontWeight:"700",
-                      }}>
-                        {openSlots.length} open
-                      </span>
+                        fontSize:"11px",color:C.green,
+                        background:C.greenDim,border:`1px solid ${C.greenBdr}`,
+                        padding:"3px 10px",borderRadius:"20px",fontWeight:"700",flexShrink:0,
+                      }}>{openSlots.length} open</span>
                     </div>
-
-                    {dateSlots.length === 0 ? (
-                      <p style={{color:C.textSoft, fontSize:"14px"}}>No slots for this date.</p>
-                    ) : (
-                      <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(96px,1fr))", gap:"8px", marginBottom:"20px"}}>
-                        {dateSlots.map(t => {
-                          const bk   = isBooked(selectedDate, t);
-                          const isSel = selectedTime === t;
-                          return (
-                            <TimeChip key={t} label={t}
-                              state={bk ? "booked" : isSel ? "selected" : "available"}
-                              onClick={bk ? undefined : () => setSelectedTime(isSel ? null : t)}
-                            />
-                          );
+                    {dateSlots.length===0?(
+                      <p style={{color:C.textSoft,fontSize:"14px"}}>No slots for this date.</p>
+                    ):(
+                      <div className="time-grid">
+                        {dateSlots.map(t=>{
+                          const bk=isBooked(selectedDate,t),isSel=selectedTime===t;
+                          return<TimeChip key={t} label={t}
+                            state={bk?"booked":isSel?"selected":"available"}
+                            onClick={bk?undefined:()=>setSelectedTime(isSel?null:t)}/>;
                         })}
                       </div>
                     )}
-
-                    {openSlots.length === 0 && dateSlots.length > 0 && (
-                      <p style={{color:C.slate, fontSize:"13px"}}>All slots are booked for this date.</p>
+                    {openSlots.length===0&&dateSlots.length>0&&(
+                      <p style={{color:C.slate,fontSize:"13px"}}>All slots are booked for this date.</p>
                     )}
-                    {selectedTime && !isBooked(selectedDate, selectedTime) && (
-                      <button
-                        style={primaryBtnSt(false)}
-                        onClick={() => { setBookStep("confirm"); setBookError(""); }}
-                      >
+                    {selectedTime&&!isBooked(selectedDate,selectedTime)&&(
+                      <button className="primary-btn" style={{
+                        background:"linear-gradient(135deg,#e8a87c,#d4845a)",border:"none",
+                        color:"#1e1a14",padding:"12px 0",fontSize:"14px",letterSpacing:"0.06em",
+                        cursor:"pointer",borderRadius:"9px",fontWeight:"600",
+                        boxShadow:"0 4px 16px rgba(232,168,124,0.35)",
+                        width:"100%",transition:"all 0.2s",marginTop:"4px",
+                      }} onClick={()=>{setBookStep("confirm");setBookError("");}}>
                         Book {selectedTime} →
                       </button>
                     )}
@@ -738,7 +828,6 @@
       );
     }
 
-    // ── Mount ────────────────────────────────────────────────────────────────
     const root = ReactDOM.createRoot(document.getElementById("root"));
     root.render(<App />);
   </script>
