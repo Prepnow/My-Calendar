@@ -27,6 +27,40 @@
     ::-webkit-scrollbar-track { background: #1e2028; }
     ::-webkit-scrollbar-thumb { background: #363a4a; border-radius: 3px; }
 
+    /* ── Calendar day cells — reliable square sizing ── */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+    .cal-day {
+      position: relative;
+      width: 100%;
+      padding-bottom: 100%; /* makes it square */
+    }
+    .cal-day-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 7px;
+      font-size: 13px;
+      user-select: none;
+      transition: background 0.15s, border 0.15s, box-shadow 0.15s;
+      cursor: default;
+    }
+    .cal-day-inner.clickable { cursor: pointer; }
+    .cal-dot {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: #7ec8a4; margin-top: 3px;
+    }
+    .cal-full {
+      font-size: 8px; font-weight: 700;
+      color: #636078; margin-top: 2px; letter-spacing: 0.04em;
+    }
+
     /* ── Responsive layout classes ── */
     .two-col {
       display: grid;
@@ -262,13 +296,17 @@
               padding:0, flexShrink:0,
             }}>›</button>
           </div>
-          <div style={{display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"3px"}}>
+          {/* Day labels */}
+          <div className="cal-grid" style={{marginBottom:"3px"}}>
             {DAYS_SHORT.map(d => (
               <div key={d} style={{textAlign:"center", fontSize:"10px", color:C.textSoft, letterSpacing:"0.08em", padding:"5px 0", textTransform:"uppercase", fontWeight:"700"}}>
                 {d}
               </div>
             ))}
-            {Array.from({length:first}).map((_,i) => <div key={"e"+i}/>)}
+          </div>
+          {/* Day cells */}
+          <div className="cal-grid">
+            {Array.from({length:first}).map((_,i) => <div key={"e"+i} className="cal-day"/>)}
             {Array.from({length:dim}).map((_,i) => renderDay(i+1, dateKey(year,month,i+1)))}
           </div>
         </div>
@@ -534,14 +572,15 @@
                         let bg="transparent",border=`1px solid transparent`,color=isPast?C.textSoft+"33":C.textSoft;
                         if(!isPast&&total>0){bg=C.accentDim;border=`1px solid ${C.accentBdr}`;color=C.accent;}
                         return(
-                          <div key={day} onClick={()=>!isPast&&adminToggleDay(key)} style={{
-                            aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",
-                            justifyContent:"center",borderRadius:"7px",
-                            cursor:isPast?"default":"pointer",background:bg,border,color,
-                            fontSize:"13px",userSelect:"none",transition:"all 0.15s",
-                          }}>
-                            {day}
-                            {!isPast&&total>0&&<div style={{fontSize:"8px",marginTop:"2px",color:C.accent,fontWeight:"700"}}>{open}✓</div>}
+                          <div key={day} className="cal-day">
+                            <div
+                              className={"cal-day-inner" + (!isPast?" clickable":"")}
+                              onClick={()=>!isPast&&adminToggleDay(key)}
+                              style={{background:bg,border,color}}
+                            >
+                              {day}
+                              {!isPast&&total>0&&<div style={{fontSize:"8px",marginTop:"2px",color:C.accent,fontWeight:"700"}}>{open}✓</div>}
+                            </div>
                           </div>
                         );
                       }}/>
@@ -719,6 +758,15 @@
           </div>
 
           <div className="main-wrap">
+            {Object.keys(availability).length===0&&(
+              <div style={{
+                padding:"12px 16px",borderRadius:"10px",marginBottom:"20px",
+                background:"rgba(232,168,124,0.08)",border:`1px solid ${C.accentBdr}`,
+                fontSize:"13px",color:C.textMid,lineHeight:1.6,
+              }}>
+                📅 No availability has been set yet. If you're the organizer, go to <strong style={{color:C.accent}}>Admin</strong> to add your open dates and times.
+              </div>
+            )}
             <div className="two-col">
 
               {/* Calendar */}
@@ -736,20 +784,24 @@
                       else if(open>0)  {bg=C.greenDim;border=`1px solid ${C.greenBdr}`;color=C.green;}
                       else if(total>0) {bg=C.slateDim;border=`1px solid ${C.slateBdr}`;color=C.slate;}
                     }
+                    const canClick=!isPast&&open>0;
                     return(
-                      <div key={day} onClick={()=>!isPast&&open>0&&setSelectedDate(isSel?null:key)} style={{
-                        aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",
-                        justifyContent:"center",borderRadius:"7px",
-                        cursor:(!isPast&&open>0)?"pointer":"default",
-                        background:bg,border:(!isPast&&isSel)?"none":border,
-                        color:isSel?"#1e1a14":color,
-                        fontSize:"13px",userSelect:"none",transition:"all 0.15s",
-                        boxShadow:isSel?"0 4px 14px rgba(232,168,124,0.4)":"none",
-                        fontWeight:isSel?"700":"normal",
-                      }}>
-                        {day}
-                        {!isPast&&open>0&&!isSel&&<div style={{width:"4px",height:"4px",borderRadius:"50%",background:C.green,marginTop:"3px"}}/>}
-                        {!isPast&&total>0&&open===0&&<div style={{fontSize:"8px",color:C.slate,marginTop:"2px",fontWeight:"700"}}>FULL</div>}
+                      <div key={day} className="cal-day">
+                        <div
+                          className={"cal-day-inner"+(canClick?" clickable":"")}
+                          onClick={()=>canClick&&setSelectedDate(isSel?null:key)}
+                          style={{
+                            background:bg,
+                            border:(!isPast&&isSel)?"none":border,
+                            color:isSel?"#1e1a14":color,
+                            boxShadow:isSel?"0 4px 14px rgba(232,168,124,0.4)":"none",
+                            fontWeight:isSel?"700":"normal",
+                          }}
+                        >
+                          {day}
+                          {!isPast&&open>0&&!isSel&&<div className="cal-dot"/>}
+                          {!isPast&&total>0&&open===0&&<div className="cal-full">FULL</div>}
+                        </div>
                       </div>
                     );
                   }}/>
