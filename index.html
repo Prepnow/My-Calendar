@@ -10,15 +10,13 @@ body{min-height:100vh;background:#1e2028;color:#eae8f0;font-family:'Palatino Lin
 button,input,textarea{font-family:inherit;font-size:inherit}
 textarea{resize:vertical}
 
-/* Header */
-.hdr{background:linear-gradient(to right,#1a1d26,#22263a);border-bottom:1px solid #363a4a;padding:15px 22px;display:flex;align-items:center;justify-content:space-between}
-.hdr-left{display:flex;align-items:center;gap:11px}
+.hdr{background:linear-gradient(to right,#1a1d26,#22263a);border-bottom:1px solid #363a4a;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hdr-left{display:flex;align-items:center;gap:11px;min-width:0}
 .hdr-icon{width:31px;height:31px;border-radius:8px;background:linear-gradient(135deg,#e8a87c,#d4845a);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.hdr-title{font-size:18px;font-style:italic;letter-spacing:.06em}
-.badge{font-size:9px;font-weight:700;letter-spacing:.12em;padding:2px 8px;border-radius:20px;background:rgba(232,168,124,.12);border:1px solid rgba(232,168,124,.35);color:#e8a87c}
+.hdr-title{font-size:18px;font-style:italic;letter-spacing:.06em;white-space:nowrap}
+.badge{font-size:9px;font-weight:700;letter-spacing:.12em;padding:2px 8px;border-radius:20px;background:rgba(232,168,124,.12);border:1px solid rgba(232,168,124,.35);color:#e8a87c;flex-shrink:0}
 
-/* Buttons */
-.btn-ghost{background:transparent;border:1px solid #363a4a;color:#9b98ac;padding:6px 13px;font-size:11px;letter-spacing:.07em;border-radius:7px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn-ghost{background:transparent;border:1px solid #363a4a;color:#9b98ac;padding:6px 13px;font-size:11px;letter-spacing:.07em;border-radius:7px;cursor:pointer;transition:border-color .15s,color .15s;white-space:nowrap;flex-shrink:0}
 .btn-ghost:hover{border-color:rgba(232,168,124,.4);color:#e8a87c}
 .btn-primary{display:block;width:100%;padding:13px;font-size:14px;font-weight:700;letter-spacing:.05em;border:none;border-radius:9px;cursor:pointer;background:linear-gradient(135deg,#e8a87c,#d4845a);color:#1e1a14;box-shadow:0 4px 14px rgba(232,168,124,.35);transition:transform .15s,box-shadow .15s}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(232,168,124,.45)}
@@ -26,7 +24,6 @@ textarea{resize:vertical}
 .btn-back{background:none;border:none;color:#9b98ac;cursor:pointer;font-size:13px;padding:0;margin-bottom:18px;display:block}
 .btn-back:hover{color:#eae8f0}
 
-/* Layout */
 .hero{background:linear-gradient(to right,#1a1d26,#22253a);border-bottom:1px solid #363a4a;padding:22px 26px}
 .hero h1{font-size:23px;font-weight:normal;margin-bottom:5px}
 .hero p{color:#9b98ac;font-size:14px;line-height:1.6}
@@ -34,400 +31,421 @@ textarea{resize:vertical}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
 .adm-col{display:grid;grid-template-columns:275px 1fr;gap:26px;align-items:start}
 
-/* Cards */
 .card{background:#272a35;border:1px solid #363a4a;border-radius:13px;padding:20px;margin-bottom:12px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
 .card-hl{background:rgba(232,168,124,.09);border-color:rgba(232,168,124,.3)}
+.card-warn{background:rgba(240,120,80,.07);border:1px solid rgba(240,120,80,.28);border-radius:12px;padding:16px 18px;margin-bottom:16px;font-size:13px;line-height:1.75;color:#ddb0a8}
+.card-warn strong{color:#e8a87c}
+.card-warn code{background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px;color:#eae8f0}
 
-/* Inputs */
 .inp{display:block;width:100%;background:#1e2028;border:1.5px solid #363a4a;border-radius:8px;color:#eae8f0;padding:11px 13px;font-size:15px;outline:none;margin-bottom:13px;transition:border-color .2s,box-shadow .2s}
 .inp:focus{border-color:rgba(232,168,124,.6);box-shadow:0 0 0 3px rgba(232,168,124,.1)}
 .lbl{display:block;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#636078;margin-bottom:8px}
 
-/* Calendar — using TABLE for bulletproof layout */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
-.cal-nav-btn{background:#2e3140;border:1px solid #363a4a;color:#9b98ac;width:33px;height:33px;border-radius:50%;cursor:pointer;font-size:17px;line-height:1;transition:background .15s}
-.cal-nav-btn:hover{background:#363a4a}
+.cal-btn{background:#2e3140;border:1px solid #363a4a;color:#9b98ac;width:33px;height:33px;border-radius:50%;cursor:pointer;font-size:17px;line-height:1;transition:background .15s}
+.cal-btn:hover{background:#363a4a}
 .cal-month{font-size:15px;letter-spacing:.03em}
 .cal-tbl{width:100%;border-collapse:separate;border-spacing:3px}
 .cal-tbl th{text-align:center;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#636078;padding:3px 0 6px}
 .cal-tbl td{padding:0}
-/* Each cell is a div INSIDE the td */
-.cal-cell{
-  width:100%;
-  aspect-ratio:1;
-  min-height:34px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  border-radius:7px;font-size:13px;
-  border:1px solid transparent;
-  cursor:default;
-  user-select:none;
-  transition:background .12s,transform .1s;
-  line-height:1.2;
-}
-.cal-cell.clickable{cursor:pointer}
-.cal-cell.clickable:hover{filter:brightness(1.15)}
-.cal-cell.clickable:active{transform:scale(.93)}
-.day-open{background:rgba(126,200,164,.13);border-color:rgba(126,200,164,.38);color:#7ec8a4}
-.day-sel{background:linear-gradient(135deg,#e8a87c,#d4845a);color:#1e1a14;font-weight:700;box-shadow:0 4px 13px rgba(232,168,124,.4)}
-.day-full{background:rgba(99,96,120,.15);border-color:rgba(99,96,120,.25);color:#636078}
-.day-past{color:#2c2f3a}
-.day-adm-on{background:rgba(232,168,124,.13);border-color:rgba(232,168,124,.38);color:#e8a87c}
-.day-adm-off{color:#4a4860}
-.day-adm-off:hover{background:#2a2d3a}
-.cal-dot{width:5px;height:5px;border-radius:50%;background:#7ec8a4;margin-top:2px}
-.cal-tag{font-size:8px;font-weight:700;margin-top:1px;letter-spacing:.04em;opacity:.8}
+.day{width:100%;aspect-ratio:1;min-height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:7px;font-size:13px;border:1px solid transparent;cursor:default;user-select:none;transition:background .12s,transform .1s;line-height:1.2}
+.day.click{cursor:pointer}
+.day.click:active{transform:scale(.92)}
+.d-open{background:rgba(126,200,164,.13);border-color:rgba(126,200,164,.38);color:#7ec8a4}
+.d-open.click:hover{background:rgba(126,200,164,.22)}
+.d-sel{background:linear-gradient(135deg,#e8a87c,#d4845a);color:#1e1a14;font-weight:700;box-shadow:0 4px 13px rgba(232,168,124,.4)}
+.d-full{background:rgba(99,96,120,.15);border-color:rgba(99,96,120,.25);color:#636078}
+.d-past{color:#2c2f3a}
+.d-aon{background:rgba(232,168,124,.13);border-color:rgba(232,168,124,.38);color:#e8a87c}
+.d-aon.click:hover{background:rgba(232,168,124,.22)}
+.d-aoff{color:#4a4860}
+.d-aoff.click:hover{background:#2a2d3a}
+.dot{width:5px;height:5px;border-radius:50%;background:#7ec8a4;margin-top:2px}
+.dtag{font-size:8px;font-weight:700;margin-top:1px;letter-spacing:.04em;opacity:.85}
 
-/* Time chips */
-.time-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:7px;margin-bottom:14px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:7px;margin-bottom:14px}
 .tchip{padding:9px 5px;border-radius:8px;font-size:12px;text-align:center;user-select:none;cursor:pointer;border:1px solid transparent;line-height:1.3;transition:background .12s,transform .1s}
 .tchip:active{transform:scale(.93)}
-.t-avail{background:rgba(126,200,164,.12);border-color:rgba(126,200,164,.35);color:#7ec8a4}
-.t-avail:hover{background:rgba(126,200,164,.22)}
-.t-sel{background:rgba(232,168,124,.18);border-color:#e8a87c;color:#e8a87c}
-.t-booked{background:rgba(99,96,120,.2);border-color:rgba(99,96,120,.28);color:#636078;cursor:default}
-.tchip-sub{font-size:9px;font-weight:700;margin-top:2px;letter-spacing:.05em}
+.t-av{background:rgba(126,200,164,.12);border-color:rgba(126,200,164,.35);color:#7ec8a4}
+.t-av:hover{background:rgba(126,200,164,.22)}
+.t-sl{background:rgba(232,168,124,.18);border-color:#e8a87c;color:#e8a87c}
+.t-bk{background:rgba(99,96,120,.2);border-color:rgba(99,96,120,.28);color:#636078;cursor:default}
+.tsub{font-size:9px;font-weight:700;margin-top:2px;letter-spacing:.05em}
 
-/* Pill (admin slot toggle) */
-.pill{display:inline-block;padding:5px 9px;border-radius:6px;font-size:12px;cursor:pointer;user-select:none;transition:background .12s;border:1px solid #363a4a;color:#636078;margin:0 3px 4px 0}
+.pill{display:inline-block;padding:5px 9px;border-radius:6px;font-size:12px;cursor:pointer;user-select:none;border:1px solid #363a4a;color:#636078;margin:0 3px 4px 0;transition:background .12s}
 .pill:hover{background:#2a2d3a}
-.pill.p-on{background:rgba(232,168,124,.12);border-color:rgba(232,168,124,.38);color:#e8a87c;font-weight:600}
-.pill.p-locked{background:rgba(99,96,120,.18);border-color:rgba(99,96,120,.28);color:#636078;cursor:default}
+.p-on{background:rgba(232,168,124,.12);border-color:rgba(232,168,124,.38);color:#e8a87c;font-weight:600}
+.p-lk{background:rgba(99,96,120,.18);border-color:rgba(99,96,120,.28);color:#636078;cursor:default}
 
-/* Tabs */
 .tabs{display:flex;border-bottom:1px solid #363a4a;margin-bottom:22px}
 .tab{background:none;border:none;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:9px 18px;cursor:pointer;color:#636078;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
 .tab.active{color:#e8a87c;border-bottom-color:#e8a87c}
 
-/* Misc */
 .notice{padding:11px 15px;border-radius:9px;margin-bottom:18px;background:rgba(232,168,124,.08);border:1px solid rgba(232,168,124,.28);font-size:13px;color:#9b98ac;line-height:1.6}
 .err{color:#e07878;font-size:13px;margin-bottom:11px}
 .legend{display:flex;gap:14px;margin-top:11px;flex-wrap:wrap}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:12px}
-.legend-sw{width:10px;height:10px;border-radius:3px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px}
+.leg-sw{width:10px;height:10px;border-radius:3px}
 .bk-card{border-left:3px solid #e8a87c;padding:15px 17px;margin-bottom:11px}
+
+.sync-bar{font-size:12px;margin-left:8px;font-style:italic}
+.sync-ok{color:#7ec8a4}.sync-spin{color:#e8a87c}.sync-err{color:#e07878}
+
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:14px}
+.spinner{width:36px;height:36px;border:3px solid #363a4a;border-top-color:#e8a87c;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:640px){
   .two-col,.adm-col{grid-template-columns:1fr}
   .main{padding:16px 13px}
   .hero{padding:16px 14px}
   .hdr{padding:13px 14px}
-  .time-grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
+  .tgrid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
 }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-// ── CONFIG ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+//  CONFIG — fill these in (see README for instructions)
+// ══════════════════════════════════════════════════════════════════
 const CFG = {
-  pass  : "admin123",
-  title : "Scheduly",
-  email : "you@example.com",
-  ejKey : "",   // EmailJS public key (optional)
-  ejSvc : "",   // EmailJS service id
-  ejTpl : "",   // EmailJS template id
+  pass  : "admin123",         // ← your admin password
+  title : "Scheduly",         // ← your name / brand
+
+  // Firebase Realtime Database
+  // Get this from Firebase Console → Project Settings → your web app
+  firebaseUrl: "https://calendar-ff8ea-default-rtdb.firebaseio.com",
 };
-const STORE = "sched_v3";
+// ══════════════════════════════════════════════════════════════════
 
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAYS   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
-const TIMES  = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"];
+const FIREBASE_READY = CFG.firebaseUrl !== "YOUR_FIREBASE_URL";
+const DB = CFG.firebaseUrl.replace(/\/+$/, "") + "/scheduly.json";
 
-// ── State ──────────────────────────────────────────────────────────────────
-const S = {
-  view:"pub",    // pub | login | admin
-  step:"pick",   // pick | confirm | done
-  avail:{},      // {"2026-02-20":["9:00 AM",...]}
-  books:[],      // [{id,date,time,name,email,note,bookedAt}]
-  py:0, pm:0,    // public calendar year/month
-  ay:0, am:0,    // admin calendar year/month
-  atab:"cal",    // admin tab: cal | books
-  sd:null,       // selected date
-  st:null,       // selected time
-  name:"", email:"", note:"",
-  berr:"", busy:false,
-  pw:"", pwerr:false,
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS=["Su","Mo","Tu","We","Th","Fr","Sa"];
+const TIMES=["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"];
+
+// ── State ─────────────────────────────────────────────────────────
+const S={
+  view:"pub", step:"pick",
+  avail:{}, books:[],
+  py:0,pm:0, ay:0,am:0, atab:"cal",
+  sd:null, st:null,
+  name:"",email:"",note:"",
+  berr:"",busy:false,
+  pw:"",pwerr:false,
+  syncing:false, syncErr:false, loaded:false,
 };
+(()=>{const n=new Date();S.py=S.ay=n.getFullYear();S.pm=S.am=n.getMonth();})();
 
-// Init calendar to current month
-(function(){
-  const n=new Date();
-  S.py=S.ay=n.getFullYear();
-  S.pm=S.am=n.getMonth();
-})();
+// ── Helpers ───────────────────────────────────────────────────────
+const daysIn =(y,m)=>new Date(y,m+1,0).getDate();
+const firstWD=(y,m)=>new Date(y,m,1).getDay();
+const toKey  =(y,m,d)=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const fmtDate= k=>{const[y,m,d]=k.split('-');return`${MONTHS[+m-1]} ${+d}, ${y}`;};
+const isPast = k=>{const t=new Date();t.setHours(0,0,0,0);const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)<t;};
+const isBook =(dt,tm)=>S.books.some(b=>b.date===dt&&b.time===tm);
+const openOf = dt=>(S.avail[dt]||[]).filter(t=>!isBook(dt,t));
+const anyOpen=()=>Object.values(S.avail).some(a=>a.length>0);
+const esc    = s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-const daysIn  = (y,m)=>new Date(y,m+1,0).getDate();
-const firstWD = (y,m)=>new Date(y,m,1).getDay();
-const key     = (y,m,d)=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-const fmtDate = k=>{ const[y,m,d]=k.split('-'); return `${MONTHS[+m-1]} ${+d}, ${y}`; };
-const past    = k=>{ const t=new Date();t.setHours(0,0,0,0);const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)<t; };
-const booked  = (date,time)=>S.books.some(b=>b.date===date&&b.time===time);
-const openOf  = date=>(S.avail[date]||[]).filter(t=>!booked(date,t));
-const anyAvail= ()=>Object.values(S.avail).some(a=>a.length>0);
-const esc     = s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-
-// ── Persistence ────────────────────────────────────────────────────────────
-function save(){
-  try{localStorage.setItem(STORE,JSON.stringify({avail:S.avail,books:S.books}));}catch(e){}
+// ── Firebase REST ─────────────────────────────────────────────────
+async function dbRead(){
+  const r=await fetch(DB);
+  if(!r.ok) throw new Error("read "+r.status);
+  const d=await r.json();
+  return d||{avail:{},books:[]};
 }
-function load(){
+async function dbWrite(data){
+  const r=await fetch(DB,{
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data),
+  });
+  if(!r.ok) throw new Error("write "+r.status);
+}
+
+// ── Load & Save ───────────────────────────────────────────────────
+function localLoad(){
+  try{const v=localStorage.getItem("sched_v4");if(v){const d=JSON.parse(v);S.avail=d.avail||{};S.books=d.books||[];}}catch(e){}
+}
+function localSave(){
+  try{localStorage.setItem("sched_v4",JSON.stringify({avail:S.avail,books:S.books}));}catch(e){}
+}
+
+async function load(){
+  if(!FIREBASE_READY){localLoad();return;}
   try{
-    const v=localStorage.getItem(STORE);
-    if(v){const d=JSON.parse(v);S.avail=d.avail||{};S.books=d.books||[];}
-  }catch(e){}
+    const d=await dbRead();
+    S.avail=d.avail||{};
+    S.books=d.books||[];
+    localSave();
+    S.syncErr=false;
+  }catch(e){
+    console.warn("Firebase read failed, using local cache:",e);
+    localLoad();
+    S.syncErr=true;
+  }
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
+async function save(){
+  localSave();
+  if(!FIREBASE_READY) return;
+  S.syncing=true; render();
+  try{
+    await dbWrite({avail:S.avail,books:S.books});
+    S.syncErr=false;
+  }catch(e){
+    console.error("Firebase write failed:",e);
+    S.syncErr=true;
+  }
+  S.syncing=false; render();
+}
+
+// ── Render ────────────────────────────────────────────────────────
 function render(){
-  let html="";
-  if(S.view==="login")       html=vLogin();
-  else if(S.view==="admin")  html=vAdmin();
-  else if(S.step==="confirm")html=vConfirm();
-  else if(S.step==="done")   html=vDone();
-  else                        html=vPub();
-  document.getElementById("app").innerHTML=html;
+  let h="";
+  if(!S.loaded)              h=vLoad();
+  else if(S.view==="login")  h=vLogin();
+  else if(S.view==="admin")  h=vAdmin();
+  else if(S.step==="confirm")h=vConfirm();
+  else if(S.step==="done")   h=vDone();
+  else                        h=vPub();
+  document.getElementById("app").innerHTML=h;
 }
 
-// ── Calendar builder ───────────────────────────────────────────────────────
-function buildCal(y,m,cellFn,navF){
+function vLoad(){
+  return`<div class="hdr"><div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div></div>
+  <div class="loading"><div class="spinner"></div><p style="color:#9b98ac;font-size:14px">Loading availability…</p></div>`;
+}
+
+// ── Calendar ──────────────────────────────────────────────────────
+function buildCal(y,m,cellFn,prevFn,nextFn){
   const dim=daysIn(y,m), fd=firstWD(y,m);
   let rows="<tr>";
-  // Empty cells before first day
-  for(let i=0;i<fd;i++) rows+=`<td><div class="cal-cell"></div></td>`;
+  for(let i=0;i<fd;i++) rows+=`<td><div class="day"></div></td>`;
   for(let d=1;d<=dim;d++){
-    const k=key(y,m,d);
-    const c=cellFn(k,d);
-    const clickable=c.click?'clickable':'';
-    const onclick=c.click?`onclick="${c.click}"`:'';
-    rows+=`<td><div class="cal-cell ${c.cls} ${clickable}" ${onclick}>${d}${c.dot?'<div class="cal-dot"></div>':''}${c.tag?`<div class="cal-tag">${c.tag}</div>`:''}</div></td>`;
-    if((fd+d)%7===0&&d<dim) rows+='</tr><tr>';
+    const k=toKey(y,m,d), c=cellFn(k);
+    rows+=`<td><div class="day ${c.cls}" ${c.fn?`onclick="${c.fn}('${k}')"`:''}>
+      ${d}${c.dot?'<div class="dot"></div>':''}${c.tag?`<div class="dtag">${c.tag}</div>`:''}
+    </div></td>`;
+    if((fd+d)%7===0&&d<dim)rows+='</tr><tr>';
   }
   rows+='</tr>';
-  return `
-    <div class="cal-nav">
-      <button class="cal-nav-btn" onclick="${navF}(-1)">&#8249;</button>
-      <span class="cal-month">${MONTHS[m]} ${y}</span>
-      <button class="cal-nav-btn" onclick="${navF}(1)">&#8250;</button>
-    </div>
-    <table class="cal-tbl">
-      <thead><tr>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  return`<div class="cal-nav">
+    <button class="cal-btn" onclick="${prevFn}()">&#8249;</button>
+    <span class="cal-month">${MONTHS[m]} ${y}</span>
+    <button class="cal-btn" onclick="${nextFn}()">&#8250;</button>
+  </div>
+  <table class="cal-tbl">
+    <thead><tr>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
-// ── View: Public pick ──────────────────────────────────────────────────────
+// ── Views ─────────────────────────────────────────────────────────
+function notConfiguredWarning(){
+  return`<div class="card-warn">
+    &#9888; <strong>Firebase not configured yet.</strong> Public visitors see an empty calendar until you add your <code>firebaseUrl</code> to the config. See the README &#8212; setup takes about 3 minutes.
+  </div>`;
+}
+
 function vPub(){
-  const cal=buildCal(S.py,S.pm,(k,d)=>{
-    if(past(k)) return{cls:'day-past'};
+  const cal=buildCal(S.py,S.pm,k=>{
+    if(isPast(k))return{cls:'d-past'};
     const op=openOf(k).length, tot=(S.avail[k]||[]).length;
-    if(k===S.sd)  return{cls:'day-sel',click:`selDate('${k}')`,dot:false};
-    if(op>0)      return{cls:'day-open',click:`selDate('${k}')`,dot:true};
-    if(tot>0)     return{cls:'day-full',tag:'FULL'};
+    if(k===S.sd)return{cls:'d-sel click',fn:'selDate'};
+    if(op>0)    return{cls:'d-open click',fn:'selDate',dot:true};
+    if(tot>0)   return{cls:'d-full',tag:'FULL'};
     return{cls:''};
-  },'navP');
+  },'pubPrev','pubNext');
 
   let times='';
   if(!S.sd){
     times=`<div class="card" style="text-align:center;padding:38px 18px">
       <div style="width:48px;height:48px;border-radius:50%;background:rgba(232,168,124,.1);border:1px solid rgba(232,168,124,.28);display:flex;align-items:center;justify-content:center;font-size:21px;margin:0 auto 13px">&#128070;</div>
-      <p style="color:#9b98ac;font-size:14px;line-height:1.7">${anyAvail()?'Pick a green date to see times.':'No dates available yet.'}</p>
+      <p style="color:#9b98ac;font-size:14px;line-height:1.7">${anyOpen()?'Pick a green date to see available times.':'No dates available yet.'}</p>
     </div>`;
-  } else {
-    const slots=S.avail[S.sd]||[];
-    const op=openOf(S.sd).length;
+  }else{
+    const slots=S.avail[S.sd]||[], op=openOf(S.sd).length;
     let chips='';
     if(!slots.length){
       chips='<p style="color:#636078;font-size:14px">No slots for this date.</p>';
-    } else {
-      chips='<div class="time-grid">';
+    }else{
+      chips='<div class="tgrid">';
       slots.forEach(t=>{
-        const bk=booked(S.sd,t),sel=S.st===t;
-        const cls=bk?'t-booked':sel?'t-sel':'t-avail';
-        chips+=`<div class="tchip ${cls}" ${bk?'':sel?`onclick="selTime('${t}')"`:(`onclick="selTime('${t}')"`)}>
-          ${t}${bk?'<div class="tchip-sub">FILLED</div>':''}
+        const bk=isBook(S.sd,t),sel=S.st===t;
+        const cls=bk?'t-bk':sel?'t-sl':'t-av';
+        chips+=`<div class="tchip ${cls}" ${bk?'':(`onclick="selTime('${t}')"`)}>
+          ${t}${bk?'<div class="tsub">FILLED</div>':''}
         </div>`;
       });
       chips+='</div>';
-      if(!op&&slots.length) chips+='<p style="color:#636078;font-size:13px">All slots booked.</p>';
+      if(!op&&slots.length)chips+='<p style="color:#636078;font-size:13px">All slots booked for this date.</p>';
     }
-    const bookBtn=(S.st&&!booked(S.sd,S.st))
+    const btn=(S.st&&!isBook(S.sd,S.st))
       ?`<button class="btn-primary" style="margin-top:10px" onclick="goConfirm()">Book ${S.st} &#8594;</button>`:'';
     times=`<div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:7px">
         <span style="font-size:15px;font-weight:600">${fmtDate(S.sd)}</span>
         <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(126,200,164,.12);border:1px solid rgba(126,200,164,.33);color:#7ec8a4">${op} open</span>
       </div>
-      ${chips}${bookBtn}
+      ${chips}${btn}
     </div>`;
   }
 
-  return `
-    <div class="hdr">
-      <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
-      <button class="btn-ghost" onclick="goLogin()">Admin</button>
-    </div>
-    <div class="hero"><h1>Book a time</h1><p>Select a green date, then pick a time slot.</p></div>
-    <div class="main">
-      ${!anyAvail()?'<div class="notice">&#128197; No availability set yet. If you\'re the organizer, click <strong style="color:#e8a87c">Admin</strong> to open your dates.</div>':''}
-      <div class="two-col">
-        <div>
-          <span class="lbl">1 &#8212; Choose a date</span>
-          <div class="card">${cal}</div>
-          <div class="legend">
-            <div class="legend-item"><div class="legend-sw" style="background:rgba(126,200,164,.13);border:1px solid rgba(126,200,164,.38)"></div><span style="color:#7ec8a4">Available</span></div>
-            <div class="legend-item"><div class="legend-sw" style="background:rgba(99,96,120,.15);border:1px solid rgba(99,96,120,.25)"></div><span style="color:#636078">Fully booked</span></div>
-          </div>
+  const syncNote=FIREBASE_READY&&S.syncErr?'<div class="notice">&#9888; Could not reach cloud storage &#8212; showing cached data.</div>':'';
+
+  return`<div class="hdr">
+    <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
+    <button class="btn-ghost" onclick="goLogin()">Admin</button>
+  </div>
+  <div class="hero"><h1>Book a time</h1><p>Select a green date, then pick a time slot.</p></div>
+  <div class="main">
+    ${!FIREBASE_READY?notConfiguredWarning():''}
+    ${syncNote}
+    <div class="two-col">
+      <div>
+        <span class="lbl">1 &#8212; Choose a date</span>
+        <div class="card">${cal}</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-sw" style="background:rgba(126,200,164,.13);border:1px solid rgba(126,200,164,.38)"></div><span style="color:#7ec8a4">Available</span></div>
+          <div class="leg-item"><div class="leg-sw" style="background:rgba(99,96,120,.15);border:1px solid rgba(99,96,120,.25)"></div><span style="color:#636078">Fully booked</span></div>
         </div>
-        <div><span class="lbl">2 &#8212; Choose a time</span>${times}</div>
       </div>
-    </div>`;
+      <div><span class="lbl">2 &#8212; Choose a time</span>${times}</div>
+    </div>
+  </div>`;
 }
 
-// ── View: Confirm ──────────────────────────────────────────────────────────
 function vConfirm(){
-  return `
-    <div class="hdr">
-      <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
-      <button class="btn-ghost" onclick="goLogin()">Admin</button>
+  return`<div class="hdr">
+    <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
+    <button class="btn-ghost" onclick="goLogin()">Admin</button>
+  </div>
+  <div class="main"><div style="max-width:450px;margin:0 auto">
+    <button class="btn-back" onclick="backPick()">&#8592; Back to calendar</button>
+    <h2 style="font-size:22px;font-weight:normal;margin-bottom:15px">Confirm your booking</h2>
+    <div class="card card-hl" style="margin-bottom:18px">
+      <div style="font-size:14px;color:#9b98ac">${fmtDate(S.sd)}</div>
+      <div style="font-size:25px;color:#e8a87c;margin-top:5px">${S.st}</div>
     </div>
-    <div class="main"><div style="max-width:450px;margin:0 auto">
-      <button class="btn-back" onclick="backPick()">&#8592; Back to calendar</button>
-      <h2 style="font-size:22px;font-weight:normal;margin-bottom:15px">Confirm your booking</h2>
-      <div class="card card-hl" style="margin-bottom:18px">
-        <div style="font-size:14px;color:#9b98ac">${fmtDate(S.sd)}</div>
-        <div style="font-size:25px;color:#e8a87c;margin-top:5px">${S.st}</div>
-      </div>
-      <label class="lbl">Your Name *</label>
-      <input class="inp" id="f-name" placeholder="Enter your name" value="${esc(S.name)}" oninput="S.name=this.value"/>
-      <label class="lbl">Email (optional)</label>
-      <input class="inp" id="f-email" type="email" placeholder="your@email.com" value="${esc(S.email)}" oninput="S.email=this.value"/>
-      <label class="lbl">Note for organizer (optional)</label>
-      <textarea class="inp" id="f-note" rows="3" placeholder="Anything you'd like to add?" oninput="S.note=this.value">${esc(S.note)}</textarea>
-      ${S.berr?`<p class="err">${esc(S.berr)}</p>`:''}
-      <button class="btn-primary" onclick="doBook()" ${S.busy?'disabled':''}>${S.busy?'Confirming&#8230;':'Confirm Booking'}</button>
-    </div></div>`;
+    <label class="lbl">Your Name *</label>
+    <input class="inp" id="f-name" placeholder="Enter your name" value="${esc(S.name)}" oninput="S.name=this.value"/>
+    <label class="lbl">Email (optional)</label>
+    <input class="inp" id="f-email" type="email" placeholder="your@email.com" value="${esc(S.email)}" oninput="S.email=this.value"/>
+    <label class="lbl">Note for organizer (optional)</label>
+    <textarea class="inp" id="f-note" rows="3" placeholder="Anything you'd like to add?" oninput="S.note=this.value">${esc(S.note)}</textarea>
+    ${S.berr?`<p class="err">${esc(S.berr)}</p>`:''}
+    <button class="btn-primary" onclick="doBook()" ${S.busy?'disabled':''}>${S.busy?'Confirming&#8230;':'Confirm Booking'}</button>
+  </div></div>`;
 }
 
-// ── View: Done ─────────────────────────────────────────────────────────────
 function vDone(){
-  return `
-    <div class="hdr">
-      <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
-      <button class="btn-ghost" onclick="goLogin()">Admin</button>
-    </div>
-    <div class="main" style="text-align:center;padding-top:48px">
-      <div style="max-width:430px;margin:0 auto">
-        <div style="width:66px;height:66px;border-radius:50%;background:rgba(126,200,164,.12);border:2px solid rgba(126,200,164,.35);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">&#10003;</div>
-        <h2 style="font-size:25px;font-weight:normal;margin-bottom:9px">You&#39;re booked!</h2>
-        <p style="color:#9b98ac;font-size:15px;line-height:1.8;margin-bottom:3px"><em style="color:#e8a87c">${esc(S.name)}</em>, confirmed for:</p>
-        <div class="card card-hl" style="display:inline-block;padding:18px 34px;margin:13px 0 18px;text-align:center">
-          <div style="font-size:14px;color:#9b98ac">${fmtDate(S.sd)}</div>
-          <div style="font-size:24px;color:#e8a87c;margin-top:5px">${S.st}</div>
-        </div>
-        <p style="color:#636078;font-size:13px;margin-bottom:22px">The organizer will be in touch.</p>
-        <button class="btn-primary" style="max-width:240px;margin:0 auto" onclick="bookAgain()">Book Another Slot</button>
+  return`<div class="hdr">
+    <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
+    <button class="btn-ghost" onclick="goLogin()">Admin</button>
+  </div>
+  <div class="main" style="text-align:center;padding-top:48px">
+    <div style="max-width:430px;margin:0 auto">
+      <div style="width:66px;height:66px;border-radius:50%;background:rgba(126,200,164,.12);border:2px solid rgba(126,200,164,.35);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">&#10003;</div>
+      <h2 style="font-size:25px;font-weight:normal;margin-bottom:9px">You&#39;re booked!</h2>
+      <p style="color:#9b98ac;font-size:15px;line-height:1.8;margin-bottom:3px"><em style="color:#e8a87c">${esc(S.name)}</em>, confirmed for:</p>
+      <div class="card card-hl" style="display:inline-block;padding:18px 34px;margin:13px 0 18px;text-align:center">
+        <div style="font-size:14px;color:#9b98ac">${fmtDate(S.sd)}</div>
+        <div style="font-size:24px;color:#e8a87c;margin-top:5px">${S.st}</div>
       </div>
-    </div>`;
+      <p style="color:#636078;font-size:13px;margin-bottom:22px">The organizer will be in touch.</p>
+      <button class="btn-primary" style="max-width:240px;margin:0 auto" onclick="bookAgain()">Book Another Slot</button>
+    </div>
+  </div>`;
 }
 
-// ── View: Login ────────────────────────────────────────────────────────────
 function vLogin(){
-  return `
-    <div class="hdr">
-      <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
-      <button class="btn-ghost" onclick="goBack()">&#8592; Back</button>
+  return`<div class="hdr">
+    <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div>
+    <button class="btn-ghost" onclick="goBack()">&#8592; Back</button>
+  </div>
+  <div class="main"><div style="max-width:390px;margin:40px auto">
+    <div class="card" style="padding:26px">
+      <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#e8a87c,#d4845a);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:16px">&#128274;</div>
+      <h2 style="font-size:20px;font-weight:normal;margin-bottom:6px">Admin Access</h2>
+      <p style="color:#9b98ac;font-size:14px;margin-bottom:19px;line-height:1.6">Manage your availability and view bookings.</p>
+      <input class="inp" id="pw" type="password" placeholder="Password" oninput="S.pw=this.value" onkeydown="if(event.key==='Enter')doLogin()"/>
+      ${S.pwerr?'<p class="err">Incorrect password.</p>':''}
+      <button class="btn-primary" onclick="doLogin()">Enter Admin</button>
     </div>
-    <div class="main"><div style="max-width:390px;margin:40px auto">
-      <div class="card" style="padding:26px">
-        <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#e8a87c,#d4845a);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:16px">&#128274;</div>
-        <h2 style="font-size:20px;font-weight:normal;margin-bottom:6px">Admin Access</h2>
-        <p style="color:#9b98ac;font-size:14px;margin-bottom:19px;line-height:1.6">Manage your availability and view bookings.</p>
-        <input class="inp" id="pw" type="password" placeholder="Password" value="${esc(S.pw)}" oninput="S.pw=this.value" onkeydown="if(event.key==='Enter')doLogin()"/>
-        ${S.pwerr?'<p class="err">Incorrect password.</p>':''}
-        <button class="btn-primary" onclick="doLogin()">Enter Admin</button>
-      </div>
-      <p style="color:#636078;font-size:12px;margin-top:11px;text-align:center">Default: admin123</p>
-    </div></div>`;
+    <p style="color:#636078;font-size:12px;margin-top:11px;text-align:center">Default: admin123</p>
+  </div></div>`;
 }
 
-// ── View: Admin ────────────────────────────────────────────────────────────
 function vAdmin(){
-  // Calendar tab
-  const cal=buildCal(S.ay,S.am,(k,d)=>{
-    if(past(k)) return{cls:'day-past'};
-    const slots=S.avail[k]||[];
-    const op=slots.filter(t=>!booked(k,t)).length;
-    if(slots.length) return{cls:'day-adm-on',click:`admDay('${k}')`,tag:`${op}&#10003;`};
-    return{cls:'day-adm-off clickable',click:`admDay('${k}')`};
-  },'navA');
+  const syncStatus=FIREBASE_READY
+    ?`<span class="sync-bar ${S.syncing?'sync-spin':S.syncErr?'sync-err':'sync-ok'}">${S.syncing?'&#8635; saving…':S.syncErr?'&#9888; sync error':'&#10003; synced'}</span>`:'';
 
-  // Slot editor for visible month
+  const cal=buildCal(S.ay,S.am,k=>{
+    if(isPast(k))return{cls:'d-past'};
+    const slots=S.avail[k]||[];
+    const op=slots.filter(t=>!isBook(k,t)).length;
+    if(slots.length)return{cls:'d-aon click',fn:'admDay',tag:`${op}&#10003;`};
+    return{cls:'d-aoff click',fn:'admDay'};
+  },'admPrev','admNext');
+
   const dim=daysIn(S.ay,S.am);
-  let editor='';
-  let hasUpcoming=false;
+  let editor='',hasUp=false;
   for(let d=1;d<=dim;d++){
-    const k=key(S.ay,S.am,d);
-    if(past(k)) continue;
-    hasUpcoming=true;
+    const k=toKey(S.ay,S.am,d);
+    if(isPast(k))continue;
+    hasUp=true;
     const slots=S.avail[k]||[];
     editor+=`<div style="margin-bottom:15px">
       <div style="font-size:13px;color:#9b98ac;margin-bottom:7px;font-weight:600">${fmtDate(k)}</div>
       <div>`;
     TIMES.forEach(t=>{
-      const on=slots.includes(t),bk=booked(k,t);
-      editor+=bk
-        ?`<span class="pill p-locked">${t} &#10003;</span>`
-        :on
-        ?`<span class="pill p-on" onclick="admTime('${k}','${t}')">${t}</span>`
-        :`<span class="pill" onclick="admTime('${k}','${t}')">${t}</span>`;
+      const on=slots.includes(t), bk=isBook(k,t);
+      if(bk) editor+=`<span class="pill p-lk">${t} &#10003;</span>`;
+      else if(on) editor+=`<span class="pill p-on" onclick="admTime('${k}','${t}')">${t}</span>`;
+      else editor+=`<span class="pill" onclick="admTime('${k}','${t}')">${t}</span>`;
     });
     editor+='</div></div>';
   }
-  if(!hasUpcoming) editor='<p style="color:#636078;font-size:14px">No upcoming dates this month.</p>';
+  if(!hasUp) editor='<p style="color:#636078;font-size:14px">No upcoming dates this month.</p>';
 
-  // Bookings tab
-  const upBk=[...S.books].filter(b=>!past(b.date)).sort((a,b)=>a.date.localeCompare(b.date)||TIMES.indexOf(a.time)-TIMES.indexOf(b.time));
-  const ptBk=[...S.books].filter(b=>past(b.date));
+  const upBk=[...S.books].filter(b=>!isPast(b.date)).sort((a,b)=>a.date.localeCompare(b.date)||TIMES.indexOf(a.time)-TIMES.indexOf(b.time));
+  const ptBk=[...S.books].filter(b=>isPast(b.date));
   let bkHtml='';
   if(!S.books.length){
     bkHtml=`<div class="card" style="text-align:center;padding:44px"><div style="font-size:32px;margin-bottom:11px">&#128235;</div><p style="color:#636078">No bookings yet.</p></div>`;
-  } else {
-    if(upBk.length){ bkHtml+=`<span class="lbl">Upcoming (${upBk.length})</span>`; upBk.forEach(b=>{bkHtml+=bkCard(b,false);}); }
-    if(ptBk.length){ bkHtml+=`<span class="lbl" style="margin-top:22px;display:block">Past (${ptBk.length})</span>`; ptBk.forEach(b=>{bkHtml+=bkCard(b,true);}); }
+  }else{
+    if(upBk.length){bkHtml+=`<span class="lbl">Upcoming (${upBk.length})</span>`;upBk.forEach(b=>{bkHtml+=bkCard(b,false);});}
+    if(ptBk.length){bkHtml+=`<span class="lbl" style="margin-top:22px;display:block">Past (${ptBk.length})</span>`;ptBk.forEach(b=>{bkHtml+=bkCard(b,true);});}
   }
 
-  return `
-    <div class="hdr">
-      <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span><span class="badge">ADMIN</span></div>
-      <button class="btn-ghost" onclick="exitAdm()">&#8592; Exit Admin</button>
+  return`<div class="hdr">
+    <div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span><span class="badge">ADMIN</span></div>
+    <button class="btn-ghost" onclick="exitAdm()">&#8592; Exit Admin</button>
+  </div>
+  <div class="main">
+    <div style="margin-bottom:20px">
+      <h2 style="font-size:23px;font-weight:normal;margin-bottom:4px">Admin Panel ${syncStatus}</h2>
+      <p style="color:#9b98ac;font-size:14px;line-height:1.6">Click any day to enable all time slots. Fine-tune individual slots on the right.</p>
+      ${!FIREBASE_READY?notConfiguredWarning():''}
     </div>
-    <div class="main">
-      <div style="margin-bottom:20px">
-        <h2 style="font-size:23px;font-weight:normal;margin-bottom:4px">Admin Panel</h2>
-        <p style="color:#9b98ac;font-size:14px;line-height:1.6">Click any day to open all its time slots. Fine-tune individual slots on the right.</p>
-      </div>
-      <div class="tabs">
-        <button class="tab ${S.atab==='cal'?'active':''}" onclick="setTab('cal')">Calendar</button>
-        <button class="tab ${S.atab==='books'?'active':''}" onclick="setTab('books')">Bookings (${S.books.length})</button>
-      </div>
-      ${S.atab==='cal'?`
-        <div class="adm-col">
-          <div>
-            <span class="lbl">Click a day to toggle all slots</span>
-            <div class="card">${cal}</div>
-          </div>
-          <div>
-            <span class="lbl">Fine-tune slots &mdash; ${MONTHS[S.am]} ${S.ay}</span>
-            ${editor}
-          </div>
-        </div>
-      `:`<div>${bkHtml}</div>`}
-    </div>`;
+    <div class="tabs">
+      <button class="tab ${S.atab==='cal'?'active':''}" onclick="setTab('cal')">Calendar</button>
+      <button class="tab ${S.atab==='books'?'active':''}" onclick="setTab('books')">Bookings (${S.books.length})</button>
+    </div>
+    ${S.atab==='cal'?`<div class="adm-col">
+      <div><span class="lbl">Click a day to toggle all slots</span><div class="card">${cal}</div></div>
+      <div><span class="lbl">Fine-tune &#8212; ${MONTHS[S.am]} ${S.ay}</span>${editor}</div>
+    </div>`:`<div>${bkHtml}</div>`}
+  </div>`;
 }
 
 function bkCard(b,dim){
-  return `<div class="card bk-card" style="opacity:${dim?.55:1}">
+  return`<div class="card bk-card" style="opacity:${dim?.55:1}">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:11px">
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:600">${esc(b.name)}</div>
@@ -441,74 +459,73 @@ function bkCard(b,dim){
   </div>`;
 }
 
-// ── Actions ────────────────────────────────────────────────────────────────
-function navP(dir){ let{py:y,pm:m}=S; dir===1?(m===11?(y++,m=0):m++):(m===0?(y--,m=11):m--); S.py=y;S.pm=m;S.sd=null;S.st=null;render(); }
-function navA(dir){ let{ay:y,am:m}=S; dir===1?(m===11?(y++,m=0):m++):(m===0?(y--,m=11):m--); S.ay=y;S.am=m;render(); }
+// ── Actions ───────────────────────────────────────────────────────
+function pubPrev(){let{py:y,pm:m}=S;m===0?(y--,m=11):m--;S.py=y;S.pm=m;S.sd=null;S.st=null;render();}
+function pubNext(){let{py:y,pm:m}=S;m===11?(y++,m=0):m++;S.py=y;S.pm=m;S.sd=null;S.st=null;render();}
+function admPrev(){let{ay:y,am:m}=S;m===0?(y--,m=11):m--;S.ay=y;S.am=m;render();}
+function admNext(){let{ay:y,am:m}=S;m===11?(y++,m=0):m++;S.ay=y;S.am=m;render();}
 
-function selDate(k){ S.sd=S.sd===k?null:k; S.st=null; render(); }
-function selTime(t){ S.st=S.st===t?null:t; render(); }
-function goConfirm(){ S.step="confirm"; S.berr=""; render(); }
-function backPick(){ S.step="pick"; S.berr=""; render(); }
-function bookAgain(){ S.step="pick"; S.sd=null; S.st=null; S.name=""; S.email=""; S.note=""; render(); }
-function goLogin(){ S.view="login"; S.pw=""; S.pwerr=false; render(); }
-function goBack(){ S.view="pub"; render(); }
-function exitAdm(){ S.view="pub"; render(); }
-function setTab(t){ S.atab=t; render(); }
+function selDate(k){S.sd=S.sd===k?null:k;S.st=null;render();}
+function selTime(t){S.st=S.st===t?null:t;render();}
+function goConfirm(){S.step="confirm";S.berr="";render();}
+function backPick(){S.step="pick";S.berr="";render();}
+function bookAgain(){S.step="pick";S.sd=null;S.st=null;S.name="";S.email="";S.note="";render();}
+function goLogin(){S.view="login";S.pw="";S.pwerr=false;render();}
+function goBack(){S.view="pub";render();}
+function exitAdm(){S.view="pub";render();}
+function setTab(t){S.atab=t;render();}
 
 function doLogin(){
-  // Read pw field directly in case oninput missed
-  const el=document.getElementById('pw'); if(el) S.pw=el.value;
-  if(S.pw===CFG.pass){ S.view="admin"; S.pwerr=false; render(); }
-  else{ S.pwerr=true; render(); }
+  const el=document.getElementById('pw');if(el)S.pw=el.value;
+  if(S.pw===CFG.pass){S.view="admin";S.pwerr=false;render();}
+  else{S.pwerr=true;render();}
 }
 
-function admDay(date){
-  if(past(date)) return;
-  const cur=S.avail[date]||[];
-  const locked=TIMES.filter(t=>booked(date,t));
-  const allOn=TIMES.every(t=>booked(date,t)||cur.includes(t));
+function admDay(k){
+  if(isPast(k))return;
+  const cur=S.avail[k]||[];
+  const locked=TIMES.filter(t=>isBook(k,t));
+  const allOn=TIMES.every(t=>isBook(k,t)||cur.includes(t));
   const next=allOn?locked:[...new Set([...locked,...TIMES])];
   const av={...S.avail};
-  if(!next.length) delete av[date]; else av[date]=next;
-  S.avail=av; save(); render();
+  if(!next.length)delete av[k];else av[k]=next;
+  S.avail=av; save();
 }
-function admTime(date,time){
-  if(booked(date,time)) return;
-  const cur=S.avail[date]||[];
-  const next=cur.includes(time)?cur.filter(t=>t!==time):[...cur,time];
+function admTime(k,t){
+  if(isBook(k,t))return;
+  const cur=S.avail[k]||[];
+  const next=cur.includes(t)?cur.filter(x=>x!==t):[...cur,t];
   const av={...S.avail};
-  if(!next.length) delete av[date]; else av[date]=next;
-  S.avail=av; save(); render();
+  if(!next.length)delete av[k];else av[k]=next;
+  S.avail=av; save();
 }
 function delBook(id){
-  S.books=S.books.filter(b=>b.id!==id); save(); render();
+  S.books=S.books.filter(b=>b.id!==id); save();
 }
-
 async function doBook(){
-  // Read form values directly
-  const n=document.getElementById('f-name'), e=document.getElementById('f-email'), nt=document.getElementById('f-note');
-  if(n)  S.name=n.value;
-  if(e)  S.email=e.value;
-  if(nt) S.note=nt.value;
-
-  if(!S.name.trim()){ S.berr="Please enter your name."; render(); return; }
-  if(booked(S.sd,S.st)){ S.berr="Slot just taken — please choose another."; S.step="pick"; render(); return; }
-
-  S.busy=true; S.berr=""; render();
+  const n=document.getElementById('f-name'),e=document.getElementById('f-email'),nt=document.getElementById('f-note');
+  if(n)S.name=n.value; if(e)S.email=e.value; if(nt)S.note=nt.value;
+  if(!S.name.trim()){S.berr="Please enter your name.";render();return;}
+  if(isBook(S.sd,S.st)){S.berr="Slot just taken — please choose another.";S.step="pick";render();return;}
+  S.busy=true;S.berr="";render();
   const entry={
     id:Date.now()+"_"+Math.random().toString(36).slice(2),
-    date:S.sd, time:S.st,
-    name:S.name.trim(), email:S.email.trim(), note:S.note.trim(),
+    date:S.sd,time:S.st,
+    name:S.name.trim(),email:S.email.trim(),note:S.note.trim(),
     bookedAt:new Date().toISOString(),
   };
   S.books=[...S.books,entry];
-  save();
-  S.busy=false; S.step="done"; render();
+  await save();
+  S.busy=false;S.step="done";render();
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────
-load();
-render();
+// ── Boot ──────────────────────────────────────────────────────────
+(async()=>{
+  render(); // show spinner
+  await load();
+  S.loaded=true;
+  render();
+})();
 </script>
 </body>
 </html>
