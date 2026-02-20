@@ -2,886 +2,749 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scheduly — Book a Time</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <!-- EmailJS — sends booking notifications to your inbox, no backend needed -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { height: 100%; }
     body {
-      min-height: 100%;
+      min-height: 100vh;
       background: #1e2028;
-      font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+      font-family: 'Palatino Linotype','Book Antiqua',Palatino,serif;
+      color: #eae8f0;
       -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
     }
     input, textarea, button { font-family: inherit; }
     textarea { resize: vertical; }
 
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #1e2028; }
-    ::-webkit-scrollbar-thumb { background: #363a4a; border-radius: 3px; }
-
-    /* ── Calendar day cells — reliable square sizing ── */
+    /* Calendar grid */
     .cal-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 3px;
+      gap: 4px;
     }
-    .cal-day {
-      position: relative;
-      width: 100%;
-      padding-bottom: 100%; /* makes it square */
-    }
-    .cal-day-inner {
-      position: absolute;
-      inset: 0;
+    /* Each cell: force square using aspect-ratio in CSS (reliable cross-browser) */
+    .cal-cell {
+      aspect-ratio: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border-radius: 7px;
-      font-size: 13px;
+      border-radius: 8px;
+      font-size: 14px;
       user-select: none;
-      transition: background 0.15s, border 0.15s, box-shadow 0.15s;
       cursor: default;
+      transition: background 0.15s, transform 0.1s;
+      border: 1px solid transparent;
+      min-height: 36px; /* fallback for browsers without aspect-ratio */
     }
-    .cal-day-inner.clickable { cursor: pointer; }
+    .cal-cell.clickable {
+      cursor: pointer;
+    }
+    .cal-cell.clickable:active {
+      transform: scale(0.95);
+    }
     .cal-dot {
-      width: 4px; height: 4px; border-radius: 50%;
-      background: #7ec8a4; margin-top: 3px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #7ec8a4;
+      margin-top: 3px;
     }
-    .cal-full {
-      font-size: 8px; font-weight: 700;
-      color: #636078; margin-top: 2px; letter-spacing: 0.04em;
+    .cal-label {
+      font-size: 9px;
+      font-weight: 700;
+      margin-top: 2px;
+      letter-spacing: 0.05em;
+    }
+    .cal-dayname {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #636078;
+      padding: 4px 0 6px;
     }
 
-    /* ── Responsive layout classes ── */
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 28px;
-      align-items: start;
-    }
-    .admin-two-col {
-      display: grid;
-      grid-template-columns: 290px 1fr;
-      gap: 32px;
-      align-items: start;
-    }
-    .time-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .slot-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .main-wrap {
-      max-width: 920px;
-      margin: 0 auto;
-      padding: 36px 24px;
-    }
-    .hero-inner {
-      max-width: 920px;
-      margin: 0 auto;
-    }
-    .header-inner {
+    /* Layout */
+    .page { min-height: 100vh; background: #1e2028; }
+    .header {
+      background: linear-gradient(to right, #1a1d26, #22263a);
+      border-bottom: 1px solid #363a4a;
+      padding: 16px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.3);
     }
-    .card-sm {
-      display: inline-block;
-      padding: 22px 40px;
-      text-align: center;
+    .hero {
+      background: linear-gradient(to right, #1a1d26, #22253a);
+      border-bottom: 1px solid #363a4a;
+      padding: 24px;
     }
+    .main { max-width: 900px; margin: 0 auto; padding: 28px 20px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    .admin-cols { display: grid; grid-template-columns: 280px 1fr; gap: 28px; align-items: start; }
+    .card {
+      background: #272a35;
+      border: 1px solid #363a4a;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    .time-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
-    /* ── Mobile ── */
-    @media (max-width: 700px) {
-      .two-col {
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-      .admin-two-col {
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-      .main-wrap {
-        padding: 20px 16px;
-      }
-      .hero-inner {
-        padding: 0;
-      }
-      .time-grid {
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 6px;
-      }
-      .card-sm {
-        display: block;
-        padding: 18px 20px;
-      }
+    /* Inputs */
+    .inp {
+      width: 100%;
+      background: #1e2028;
+      border: 1.5px solid #363a4a;
+      border-radius: 8px;
+      color: #eae8f0;
+      padding: 11px 14px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      display: block;
     }
-
-    /* ── Input focus glow ── */
-    input:focus, textarea:focus {
-      border-color: rgba(232,168,124,0.6) !important;
+    .inp:focus {
+      border-color: rgba(232,168,124,0.6);
       box-shadow: 0 0 0 3px rgba(232,168,124,0.1);
     }
+    .lbl {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #636078;
+      margin-bottom: 8px;
+    }
 
-    /* ── Button hover ── */
-    .primary-btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(232,168,124,0.45) !important;
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, #e8a87c, #d4845a);
+      border: none;
+      color: #1e1a14;
+      padding: 13px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      border-radius: 9px;
+      box-shadow: 0 4px 16px rgba(232,168,124,0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+      width: 100%;
+      font-family: inherit;
     }
-    .primary-btn:active:not(:disabled) {
-      transform: translateY(0);
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(232,168,124,0.45); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { background: #2e3140; color: #636078; box-shadow: none; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid #363a4a;
+      color: #9b98ac;
+      padding: 7px 14px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border-radius: 7px;
+      transition: border-color 0.15s, color 0.15s;
+      font-family: inherit;
+      white-space: nowrap;
     }
-    .ghost-btn:hover {
-      border-color: rgba(232,168,124,0.4) !important;
-      color: #e8a87c !important;
+    .btn-ghost:hover { border-color: rgba(232,168,124,0.4); color: #e8a87c; }
+    .btn-back {
+      background: none; border: none; color: #9b98ac;
+      cursor: pointer; font-size: 13px; padding: 0;
+      margin-bottom: 20px; font-family: inherit;
+    }
+    .btn-back:hover { color: #eae8f0; }
+
+    /* Tab bar */
+    .tabs { display: flex; border-bottom: 1px solid #363a4a; margin-bottom: 24px; }
+    .tab {
+      background: none; border: none; font-family: inherit;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 10px 20px; cursor: pointer; color: #636078;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab.active { color: #e8a87c; border-bottom-color: #e8a87c; }
+
+    /* Time chips */
+    .tchip {
+      padding: 8px 6px; border-radius: 8px; font-size: 12px;
+      text-align: center; cursor: pointer; user-select: none;
+      transition: background 0.12s, border-color 0.12s;
+      line-height: 1.3; border: 1px solid transparent;
+      font-family: inherit;
+    }
+    .tchip.available { background: rgba(126,200,164,0.12); border-color: rgba(126,200,164,0.35); color: #7ec8a4; }
+    .tchip.selected  { background: rgba(232,168,124,0.18); border-color: #e8a87c; color: #e8a87c; }
+    .tchip.booked    { background: rgba(99,96,120,0.2); border-color: rgba(99,96,120,0.3); color: #636078; cursor: default; }
+
+    /* Misc */
+    .badge-green {
+      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+      background: rgba(126,200,164,0.12); border: 1px solid rgba(126,200,164,0.35); color: #7ec8a4;
+    }
+    .badge-accent {
+      font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+      background: rgba(232,168,124,0.12); border: 1px solid rgba(232,168,124,0.35); color: #e8a87c;
+      letter-spacing: 0.12em;
+    }
+    .notice {
+      padding: 12px 16px; border-radius: 10px; margin-bottom: 20px;
+      background: rgba(232,168,124,0.08); border: 1px solid rgba(232,168,124,0.3);
+      font-size: 13px; color: #9b98ac; line-height: 1.6;
+    }
+    .err { color: #e07878; font-size: 13px; margin-bottom: 12px; }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      .two-col, .admin-cols { grid-template-columns: 1fr; }
+      .main { padding: 20px 16px; }
+      .hero { padding: 18px 16px; }
+      .header { padding: 14px 16px; }
+      .time-grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+      .cal-cell { font-size: 13px; min-height: 32px; }
     }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
 
-  <script type="text/babel">
-    const { useState, useEffect, useCallback } = React;
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const ADMIN_PASSWORD    = "admin123";
+const APP_TITLE         = "Scheduly";
+const ORGANIZER_EMAIL   = "you@example.com";
+const STORAGE_KEY       = "scheduly_v2";
 
-    // ════════════════════════════════════════════════════════════════════════
-    // ██  CONFIG — edit these before uploading to GitHub
-    // ════════════════════════════════════════════════════════════════════════
+const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
+const EMAIL_ENABLED = EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY";
+// ───────────────────────────────────────────────────────────────────────────
 
-    const ADMIN_PASSWORD    = "admin123";          // Your admin password
-    const APP_TITLE         = "Scheduly";          // Your name / brand
-    const ORGANIZER_EMAIL   = "you@example.com";   // Your email — gets booking notifications
-    const STORAGE_PREFIX    = "scheduly_";         // Change if running multiple instances
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+const TIMES  = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"];
 
-    // EmailJS setup (free at emailjs.com — see README for instructions)
-    const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";   // from EmailJS → Account → API Keys
-    const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";   // from EmailJS → Email Services
-    const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";  // from EmailJS → Email Templates
+const daysInMonth  = (y,m) => new Date(y,m+1,0).getDate();
+const firstWeekday = (y,m) => new Date(y,m,1).getDay();
+const toKey   = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const fmtDate = k => { const [y,m,d]=k.split('-'); return `${MONTHS[+m-1]} ${+d}, ${y}`; };
+const isPast  = k => { const t=new Date(); t.setHours(0,0,0,0); const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d)<t; };
 
-    const EMAIL_ENABLED = EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY";
+// Storage: one JSON blob to avoid sync issues
+function loadStore() {
+  try { const v=localStorage.getItem(STORAGE_KEY); return v ? JSON.parse(v) : {availability:{}, bookings:[]}; }
+  catch { return {availability:{}, bookings:[]}; }
+}
+function saveStore(store) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); } catch {}
+}
 
-    // ════════════════════════════════════════════════════════════════════════
+async function sendEmail(booking) {
+  if (!EMAIL_ENABLED) return false;
+  try {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: ORGANIZER_EMAIL,
+      booker_name: booking.name,
+      booker_email: booking.email || "not provided",
+      booking_date: fmtDate(booking.date),
+      booking_time: booking.time,
+      booking_note: booking.note || "—",
+      app_title: APP_TITLE,
+    });
+    return true;
+  } catch(e) { console.error("EmailJS:", e); return false; }
+}
 
-    const MONTHS     = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    const DAYS_SHORT = ["Su","Mo","Tu","We","Th","Fr","Sa"];
-    const TIME_SLOTS = ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"];
+// ── Header ─────────────────────────────────────────────────────────────────
+function Header({ adminLabel, onAdmin, badge }) {
+  return (
+    <div className="header">
+      <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+        <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#e8a87c,#d4845a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,boxShadow:"0 2px 8px rgba(232,168,124,0.4)",flexShrink:0}}>📅</div>
+        <span style={{fontSize:18,letterSpacing:"0.06em",fontStyle:"italic"}}>{APP_TITLE}</span>
+        {badge && <span className="badge-accent">{badge}</span>}
+      </div>
+      <button className="btn-ghost" onClick={onAdmin}>{adminLabel || "Admin"}</button>
+    </div>
+  );
+}
 
-    const getDaysInMonth = (y, m) => new Date(y, m+1, 0).getDate();
-    const getFirstDay    = (y, m) => new Date(y, m, 1).getDay();
-    const dateKey = (y, m, d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const formatDate = (key) => {
-      const [y,m,d] = key.split('-');
-      return `${MONTHS[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
-    };
-    const isDatePast = (key) => {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const [y,m,d] = key.split('-').map(Number);
-      return new Date(y,m-1,d) < today;
-    };
-
-    const loadData = (key) => {
-      try { const v = localStorage.getItem(STORAGE_PREFIX+key); return v ? JSON.parse(v) : null; }
-      catch { return null; }
-    };
-    const saveData = (key, value) => {
-      try { localStorage.setItem(STORAGE_PREFIX+key, JSON.stringify(value)); return true; }
-      catch { return false; }
-    };
-
-    // ── Palette ──────────────────────────────────────────────────────────────
-    const C = {
-      bg:        "#1e2028",
-      surface:   "#272a35",
-      surfaceHi: "#2e3140",
-      border:    "#363a4a",
-      text:      "#eae8f0",
-      textMid:   "#9b98ac",
-      textSoft:  "#636078",
-      accent:    "#e8a87c",
-      accentDim: "rgba(232,168,124,0.12)",
-      accentBdr: "rgba(232,168,124,0.35)",
-      green:     "#7ec8a4",
-      greenDim:  "rgba(126,200,164,0.12)",
-      greenBdr:  "rgba(126,200,164,0.35)",
-      red:       "#e07878",
-      slate:     "#636078",
-      slateDim:  "rgba(99,96,120,0.2)",
-      slateBdr:  "rgba(99,96,120,0.35)",
-    };
-
-    const inputSt = {
-      width:"100%", background:C.bg, border:`1.5px solid ${C.border}`,
-      borderRadius:"8px", color:C.text, padding:"12px 15px", fontSize:"15px",
-      outline:"none", transition:"border-color 0.2s, box-shadow 0.2s",
-    };
-    const labelSt = {
-      fontSize:"10px", letterSpacing:"0.14em", color:C.textSoft,
-      textTransform:"uppercase", marginBottom:"10px", display:"block", fontWeight:"600",
-    };
-    const cardSt = {
-      background:C.surface, border:`1px solid ${C.border}`,
-      borderRadius:"14px", padding:"22px 24px", marginBottom:"14px",
-      boxShadow:"0 4px 20px rgba(0,0,0,0.25)",
-    };
-
-    // ── Reusable components ───────────────────────────────────────────────────
-    function Header({ onAdmin, label, badge }) {
-      return (
-        <div style={{
-          background:"linear-gradient(to right,#1a1d26,#22263a)",
-          borderBottom:`1px solid ${C.border}`,
-          padding:"16px 20px",
-          boxShadow:"0 2px 16px rgba(0,0,0,0.3)",
-        }}>
-          <div className="header-inner">
-            <div style={{display:"flex", alignItems:"center", gap:"12px"}}>
-              <div style={{
-                width:"32px", height:"32px", borderRadius:"8px",
-                background:"linear-gradient(135deg,#e8a87c,#d4845a)",
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:"16px", boxShadow:"0 2px 8px rgba(232,168,124,0.4)", flexShrink:0,
-              }}>📅</div>
-              <span style={{fontSize:"18px", letterSpacing:"0.06em", color:C.text, fontStyle:"italic"}}>
-                {APP_TITLE}
-              </span>
-              {badge && (
-                <span style={{
-                  fontSize:"9px", color:C.accent, letterSpacing:"0.14em",
-                  border:`1px solid ${C.accentBdr}`, background:C.accentDim,
-                  padding:"3px 8px", borderRadius:"20px", fontWeight:"700",
-                }}>{badge}</span>
-              )}
+// ── Calendar ───────────────────────────────────────────────────────────────
+function Calendar({ year, month, onNav, cellProps }) {
+  const dim   = daysInMonth(year, month);
+  const first = firstWeekday(year, month);
+  return (
+    <div>
+      {/* Month nav */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <button className="btn-ghost" style={{width:34,height:34,padding:0,fontSize:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>onNav(-1)}>‹</button>
+        <span style={{fontSize:16,letterSpacing:"0.03em"}}>{MONTHS[month]} {year}</span>
+        <button className="btn-ghost" style={{width:34,height:34,padding:0,fontSize:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>onNav(1)}>›</button>
+      </div>
+      {/* Day names */}
+      <div className="cal-grid" style={{marginBottom:2}}>
+        {DAYS.map(d=><div key={d} className="cal-dayname">{d}</div>)}
+      </div>
+      {/* Day cells */}
+      <div className="cal-grid">
+        {Array.from({length:first}).map((_,i)=><div key={"_"+i} className="cal-cell" style={{background:"transparent"}}/>)}
+        {Array.from({length:dim}).map((_,i)=>{
+          const day = i+1;
+          const key = toKey(year,month,day);
+          const p   = cellProps(key, day);
+          return (
+            <div
+              key={key}
+              className={"cal-cell"+(p.clickable?" clickable":"")}
+              style={{background:p.bg||"transparent", border:`1px solid ${p.border||"transparent"}`, color:p.color||"#636078", boxShadow:p.shadow||"none", fontWeight:p.bold?"700":"normal"}}
+              onClick={p.onClick}
+            >
+              {day}
+              {p.dot && <div className="cal-dot"/>}
+              {p.label && <div className="cal-label" style={{color:p.labelColor||"inherit"}}>{p.label}</div>}
             </div>
-            <button onClick={onAdmin} className="ghost-btn" style={{
-              background:"transparent", border:`1px solid ${C.border}`, color:C.textMid,
-              padding:"7px 14px", cursor:"pointer", fontSize:"11px", letterSpacing:"0.08em",
-              borderRadius:"7px", transition:"all 0.2s", whiteSpace:"nowrap", flexShrink:0,
-            }}>{label || "Admin"}</button>
-          </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ───────────────────────────────────────────────────────────────
+function App() {
+  const now = new Date();
+
+  // Single source of truth — loaded from localStorage
+  const [avail,    setAvail]    = useState({});   // {dateKey: [timeStr, ...]}
+  const [bookings, setBookings] = useState([]);   // [{id,date,time,name,email,note,bookedAt}]
+  const [ready,    setReady]    = useState(false);
+
+  // Navigation
+  const [pubYear,  setPubYear]  = useState(now.getFullYear());
+  const [pubMonth, setPubMonth] = useState(now.getMonth());
+  const [adYear,   setAdYear]   = useState(now.getFullYear());
+  const [adMonth,  setAdMonth]  = useState(now.getMonth());
+
+  // Views: "public" | "login" | "admin"
+  const [view, setView] = useState("public");
+
+  // Booking flow: "pick" | "confirm" | "done"
+  const [step,      setStep]      = useState("pick");
+  const [selDate,   setSelDate]   = useState(null);
+  const [selTime,   setSelTime]   = useState(null);
+  const [bkName,    setBkName]    = useState("");
+  const [bkEmail,   setBkEmail]   = useState("");
+  const [bkNote,    setBkNote]    = useState("");
+  const [bkErr,     setBkErr]     = useState("");
+  const [bkLoading, setBkLoading] = useState(false);
+
+  // Admin
+  const [pw,     setPw]     = useState("");
+  const [pwErr,  setPwErr]  = useState(false);
+  const [adTab,  setAdTab]  = useState("calendar");
+  const [saving, setSaving] = useState(false);
+
+  // Load from storage once
+  useEffect(() => {
+    const store = loadStore();
+    setAvail(store.availability || {});
+    setBookings(store.bookings || []);
+    setReady(true);
+  }, []);
+
+  // Helpers
+  const isBooked = (date, time) => bookings.some(b => b.date===date && b.time===time);
+  const openSlots = (date) => (avail[date]||[]).filter(t => !isBooked(date,t));
+
+  // Persist both together to avoid any sync issue
+  function persist(newAvail, newBookings) {
+    saveStore({ availability: newAvail, bookings: newBookings });
+  }
+
+  // Nav month
+  function navPub(dir) {
+    if(dir===1){ if(pubMonth===11){setPubMonth(0);setPubYear(y=>y+1);}else setPubMonth(m=>m+1); }
+    else       { if(pubMonth===0) {setPubMonth(11);setPubYear(y=>y-1);}else setPubMonth(m=>m-1); }
+  }
+  function navAd(dir) {
+    if(dir===1){ if(adMonth===11){setAdMonth(0);setAdYear(y=>y+1);}else setAdMonth(m=>m+1); }
+    else       { if(adMonth===0) {setAdMonth(11);setAdYear(y=>y-1);}else setAdMonth(m=>m-1); }
+  }
+
+  // Admin toggle
+  function adminToggleDay(date) {
+    if(isPast(date)) return;
+    const cur = avail[date]||[];
+    const bookedNow = TIMES.filter(t => isBooked(date,t));
+    const allOn = TIMES.every(t => isBooked(date,t)||cur.includes(t));
+    const next = allOn ? bookedNow : [...new Set([...bookedNow,...TIMES])];
+    const na = {...avail};
+    if(next.length===0) delete na[date]; else na[date]=next;
+    setAvail(na);
+    persist(na, bookings);
+  }
+  function adminToggleTime(date, time) {
+    if(isBooked(date,time)) return;
+    const cur = avail[date]||[];
+    const next = cur.includes(time) ? cur.filter(t=>t!==time) : [...cur,time];
+    const na = {...avail};
+    if(next.length===0) delete na[date]; else na[date]=next;
+    setAvail(na);
+    persist(na, bookings);
+  }
+
+  // Public booking
+  async function confirmBooking() {
+    if(!bkName.trim()){ setBkErr("Please enter your name."); return; }
+    if(isBooked(selDate,selTime)){ setBkErr("Slot just taken — please pick another."); setStep("pick"); return; }
+    setBkLoading(true);
+    const entry = {
+      id: Date.now()+"", date:selDate, time:selTime,
+      name:bkName.trim(), email:bkEmail.trim(), note:bkNote.trim(),
+      bookedAt: new Date().toISOString(), emailSent:false,
+    };
+    const sent = await sendEmail(entry);
+    entry.emailSent = sent;
+    const nb = [...bookings, entry];
+    setBookings(nb);
+    persist(avail, nb);
+    setBkLoading(false);
+    setStep("done");
+  }
+
+  function deleteBooking(id) {
+    const nb = bookings.filter(b=>b.id!==id);
+    setBookings(nb);
+    persist(avail, nb);
+  }
+
+  function tryLogin() {
+    if(pw===ADMIN_PASSWORD){ setPwErr(false); setView("admin"); }
+    else setPwErr(true);
+  }
+
+  // ── LOGIN ─────────────────────────────────────────────────────────────────
+  if(view==="login") return (
+    <div className="page">
+      <Header adminLabel="← Back" onAdmin={()=>{setView("public");setPw("");setPwErr(false);}}/>
+      <div style={{maxWidth:400,margin:"60px auto",padding:"0 20px"}}>
+        <div className="card" style={{padding:28}}>
+          <div style={{width:44,height:44,borderRadius:12,background:"linear-gradient(135deg,#e8a87c,#d4845a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:18}}>🔒</div>
+          <h2 style={{fontSize:21,fontWeight:"normal",marginBottom:6}}>Admin Access</h2>
+          <p style={{color:"#9b98ac",fontSize:14,marginBottom:20,lineHeight:1.6}}>Manage your availability and view bookings.</p>
+          <input className="inp" type="password" placeholder="Password" style={{marginBottom:12}}
+            value={pw} onChange={e=>setPw(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&tryLogin()}/>
+          {pwErr && <p className="err">Incorrect password.</p>}
+          <button className="btn-primary" onClick={tryLogin}>Enter Admin</button>
         </div>
-      );
-    }
+        <p style={{color:"#636078",fontSize:12,marginTop:12,textAlign:"center"}}>Default password: admin123</p>
+      </div>
+    </div>
+  );
 
-    function CalendarGrid({ year, month, onNav, renderDay }) {
-      const dim = getDaysInMonth(year, month), first = getFirstDay(year, month);
-      return (
-        <div>
-          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"16px"}}>
-            <button onClick={() => onNav(-1)} style={{
-              background:C.surfaceHi, border:`1px solid ${C.border}`, color:C.textMid,
-              width:"34px", height:"34px", borderRadius:"50%", cursor:"pointer",
-              fontSize:"18px", display:"flex", alignItems:"center", justifyContent:"center",
-              padding:0, flexShrink:0,
-            }}>‹</button>
-            <span style={{fontSize:"16px", color:C.text, letterSpacing:"0.03em", textAlign:"center"}}>
-              {MONTHS[month]} {year}
-            </span>
-            <button onClick={() => onNav(1)} style={{
-              background:C.surfaceHi, border:`1px solid ${C.border}`, color:C.textMid,
-              width:"34px", height:"34px", borderRadius:"50%", cursor:"pointer",
-              fontSize:"18px", display:"flex", alignItems:"center", justifyContent:"center",
-              padding:0, flexShrink:0,
-            }}>›</button>
-          </div>
-          {/* Day labels */}
-          <div className="cal-grid" style={{marginBottom:"3px"}}>
-            {DAYS_SHORT.map(d => (
-              <div key={d} style={{textAlign:"center", fontSize:"10px", color:C.textSoft, letterSpacing:"0.08em", padding:"5px 0", textTransform:"uppercase", fontWeight:"700"}}>
-                {d}
-              </div>
-            ))}
-          </div>
-          {/* Day cells */}
-          <div className="cal-grid">
-            {Array.from({length:first}).map((_,i) => <div key={"e"+i} className="cal-day"/>)}
-            {Array.from({length:dim}).map((_,i) => renderDay(i+1, dateKey(year,month,i+1)))}
-          </div>
-        </div>
-      );
-    }
+  // ── ADMIN ─────────────────────────────────────────────────────────────────
+  if(view==="admin") {
+    const mdates = Array.from({length:daysInMonth(adYear,adMonth)},(_,i)=>toKey(adYear,adMonth,i+1));
+    const upcoming = [...bookings].filter(b=>!isPast(b.date)).sort((a,b)=>a.date.localeCompare(b.date)||TIMES.indexOf(a.time)-TIMES.indexOf(b.time));
+    const past = [...bookings].filter(b=>isPast(b.date));
 
-    function TimeChip({ label, state, onClick }) {
-      const s = {
-        available:{ bg:C.greenDim, border:C.greenBdr, text:C.green },
-        selected: { bg:C.accentDim, border:C.accent, text:C.accent },
-        booked:   { bg:C.slateDim, border:C.slateBdr, text:C.slate },
-        on:       { bg:C.accentDim, border:C.accentBdr, text:C.accent },
-        off:      { bg:"transparent", border:C.border, text:C.textSoft },
-      }[state] || {};
-      return (
-        <div onClick={onClick} style={{
-          padding:"8px 6px", borderRadius:"8px",
-          border:`1px solid ${s.border}`, background:s.bg, color:s.text,
-          fontSize:"12px", cursor:onClick?"pointer":"default",
-          textAlign:"center", transition:"all 0.13s", userSelect:"none", lineHeight:1.3,
-        }}>
-          {label}
-          {state==="booked" && <div style={{fontSize:"9px",marginTop:"2px",letterSpacing:"0.06em",fontWeight:"700"}}>FILLED</div>}
-        </div>
-      );
-    }
-
-    function BookingCard({ b, onDelete, past }) {
-      return (
-        <div style={{...cardSt, opacity:past?0.55:1, borderLeft:`3px solid ${C.accent}`, padding:"16px 18px"}}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"12px"}}>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:"15px", color:C.text, fontWeight:"600"}}>{b.name}</div>
-              <div style={{fontSize:"13px", color:C.accent, marginTop:"4px"}}>
-                {formatDate(b.date)} · {b.time}
-              </div>
-              {b.email && (
-                <div style={{fontSize:"12px", color:C.textMid, marginTop:"4px"}}>
-                  ✉ {b.email}
-                </div>
-              )}
-              {b.note && <div style={{fontSize:"13px",color:C.textMid,marginTop:"6px",fontStyle:"italic"}}>"{b.note}"</div>}
-              <div style={{fontSize:"11px",color:C.textSoft,marginTop:"7px"}}>
-                Booked {new Date(b.bookedAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
-                {b.emailSent && <span style={{marginLeft:"8px",color:C.green,fontSize:"10px"}}>✉ notified</span>}
-              </div>
-            </div>
-            <button onClick={()=>onDelete(b.id)} style={{background:"transparent",border:"none",color:C.textSoft,cursor:"pointer",fontSize:"20px",lineHeight:1,padding:0,flexShrink:0}}>×</button>
-          </div>
-        </div>
-      );
-    }
-
-    // ── Send notification email via EmailJS ──────────────────────────────────
-    async function sendNotificationEmail(booking) {
-      if (!EMAIL_ENABLED) return false;
-      try {
-        emailjs.init(EMAILJS_PUBLIC_KEY);
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          to_email:      ORGANIZER_EMAIL,
-          booker_name:   booking.name,
-          booker_email:  booking.email || "not provided",
-          booking_date:  formatDate(booking.date),
-          booking_time:  booking.time,
-          booking_note:  booking.note || "none",
-          app_title:     APP_TITLE,
-        });
-        return true;
-      } catch (e) {
-        console.error("EmailJS error:", e);
-        return false;
-      }
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // Main App
-    // ════════════════════════════════════════════════════════════════════════
-    function App() {
-      const today = new Date();
-      const [view,         setView]         = useState("public");
-      const [year,         setYear]         = useState(today.getFullYear());
-      const [month,        setMonth]        = useState(today.getMonth());
-      const [availability, setAvailability] = useState({});
-      const [bookings,     setBookings]     = useState([]);
-      const [loading,      setLoading]      = useState(true);
-
-      // Public booking state
-      const [selectedDate, setSelectedDate] = useState(null);
-      const [selectedTime, setSelectedTime] = useState(null);
-      const [bookName,     setBookName]     = useState("");
-      const [bookEmail,    setBookEmail]    = useState("");
-      const [bookNote,     setBookNote]     = useState("");
-      const [bookStep,     setBookStep]     = useState("pick");
-      const [bookError,    setBookError]    = useState("");
-      const [bookLoading,  setBookLoading]  = useState(false);
-
-      // Admin state
-      const [password,      setPassword]      = useState("");
-      const [passwordError, setPasswordError] = useState(false);
-      const [adminYear,     setAdminYear]     = useState(today.getFullYear());
-      const [adminMonth,    setAdminMonth]    = useState(today.getMonth());
-      const [adminTab,      setAdminTab]      = useState("calendar");
-      const [saving,        setSaving]        = useState(false);
-
-      useEffect(() => {
-        const av = loadData("availability");
-        const bk = loadData("bookings");
-        if (av) setAvailability(av);
-        if (bk) setBookings(bk);
-        setLoading(false);
-      }, []);
-
-      function navMonth(dir, admin=false) {
-        const m=admin?adminMonth:month, y=admin?adminYear:year;
-        const setM=admin?setAdminMonth:setMonth, setY=admin?setAdminYear:setYear;
-        if(dir===1){if(m===11){setM(0);setY(y+1);}else setM(m+1);}
-        else{if(m===0){setM(11);setY(y-1);}else setM(m-1);}
-      }
-
-      const isBooked    = (date,time) => bookings.some(b=>b.date===date&&b.time===time);
-      const getOpenSlots = (date) => (availability[date]||[]).filter(t=>!isBooked(date,t));
-
-      function adminToggleTime(date,time) {
-        if(isBooked(date,time)) return;
-        const cur=availability[date]||[];
-        const next=cur.includes(time)?cur.filter(t=>t!==time):[...cur,time];
-        const nextAv={...availability};
-        if(next.length===0) delete nextAv[date]; else nextAv[date]=next;
-        setAvailability(nextAv); setSaving(true);
-        saveData("availability",nextAv); setSaving(false);
-      }
-
-      function adminToggleDay(date) {
-        if(isDatePast(date)) return;
-        const cur=availability[date]||[];
-        const bookedTimes=TIME_SLOTS.filter(t=>isBooked(date,t));
-        const allOn=TIME_SLOTS.every(t=>isBooked(date,t)||cur.includes(t));
-        const next=allOn?bookedTimes:[...new Set([...bookedTimes,...TIME_SLOTS])];
-        const nextAv={...availability};
-        if(next.length===0) delete nextAv[date]; else nextAv[date]=next;
-        setAvailability(nextAv); setSaving(true);
-        saveData("availability",nextAv); setSaving(false);
-      }
-
-      function deleteBooking(id) {
-        const updated=bookings.filter(b=>b.id!==id);
-        setBookings(updated); saveData("bookings",updated);
-      }
-
-      async function confirmBooking() {
-        if(!bookName.trim()){setBookError("Please enter your name.");return;}
-        if(isBooked(selectedDate,selectedTime)){
-          setBookError("This slot was just taken. Please choose another.");
-          setBookStep("pick");return;
-        }
-        setBookLoading(true);
-        const entry={
-          id:Date.now().toString(),
-          date:selectedDate, time:selectedTime,
-          name:bookName.trim(), email:bookEmail.trim(), note:bookNote.trim(),
-          bookedAt:new Date().toISOString(),
-          emailSent:false,
-        };
-        // Send notification email
-        const sent = await sendNotificationEmail(entry);
-        entry.emailSent = sent;
-
-        const updated=[...bookings,entry];
-        setBookings(updated); saveData("bookings",updated);
-        setBookLoading(false); setBookStep("done");
-      }
-
-      const appWrap={minHeight:"100vh",background:C.bg,color:C.text};
-
-      // ── Login ────────────────────────────────────────────────────────────
-      if(view==="login") return(
-        <div style={appWrap}>
-          <Header label="← Back" onAdmin={()=>{setView("public");setPassword("");setPasswordError(false);}}/>
-          <div style={{maxWidth:"400px",margin:"50px auto",padding:"0 20px"}}>
-            <div style={{...cardSt,padding:"28px"}}>
-              <div style={{
-                width:"44px",height:"44px",borderRadius:"12px",
-                background:"linear-gradient(135deg,#e8a87c,#d4845a)",
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:"20px",marginBottom:"18px",
-              }}>🔒</div>
-              <h2 style={{fontSize:"21px",fontWeight:"normal",marginBottom:"6px",color:C.text}}>Admin Access</h2>
-              <p style={{color:C.textMid,fontSize:"14px",marginBottom:"20px",lineHeight:1.6}}>
-                Manage availability and view all bookings.
-              </p>
-              <input style={{...inputSt,marginBottom:"12px"}} type="password" placeholder="Enter password"
-                value={password} onChange={e=>setPassword(e.target.value)}
-                onKeyDown={e=>{
-                  if(e.key==="Enter"){
-                    if(password===ADMIN_PASSWORD){setPasswordError(false);setView("admin");}
-                    else setPasswordError(true);
-                  }
-                }}/>
-              {passwordError&&<p style={{color:C.red,fontSize:"13px",marginBottom:"12px"}}>Incorrect password.</p>}
-              <button className="primary-btn" style={{
-                background:"linear-gradient(135deg,#e8a87c,#d4845a)",border:"none",
-                color:"#1e1a14",padding:"13px 0",fontSize:"14px",letterSpacing:"0.06em",
-                cursor:"pointer",borderRadius:"9px",fontWeight:"600",
-                boxShadow:"0 4px 16px rgba(232,168,124,0.35)",width:"100%",
-                transition:"all 0.2s",
-              }} onClick={()=>{
-                if(password===ADMIN_PASSWORD){setPasswordError(false);setView("admin");}
-                else setPasswordError(true);
-              }}>Enter Admin</button>
-            </div>
-            <p style={{color:C.textSoft,fontSize:"12px",marginTop:"12px",textAlign:"center"}}>Default: admin123</p>
-          </div>
-        </div>
-      );
-
-      // ── Admin ────────────────────────────────────────────────────────────
-      if(view==="admin"){
-        const upcoming=bookings.filter(b=>!isDatePast(b.date)).sort((a,b)=>a.date.localeCompare(b.date)||TIME_SLOTS.indexOf(a.time)-TIME_SLOTS.indexOf(b.time));
-        const past=bookings.filter(b=>isDatePast(b.date));
-        const monthDates=Array.from({length:getDaysInMonth(adminYear,adminMonth)},(_,i)=>dateKey(adminYear,adminMonth,i+1));
-
-        return(
-          <div style={appWrap}>
-            <Header badge="ADMIN" label="← Exit" onAdmin={()=>{setView("public");setPassword("");}}/>
-            <div className="main-wrap">
-              <div style={{marginBottom:"24px"}}>
-                <h2 style={{fontSize:"24px",fontWeight:"normal",marginBottom:"4px",color:C.text}}>
-                  Admin Panel
-                  {saving&&<span style={{fontSize:"12px",color:C.textSoft,fontStyle:"italic",marginLeft:"10px"}}>saving…</span>}
-                </h2>
-                <p style={{color:C.textMid,fontSize:"14px",lineHeight:1.6}}>Toggle dates and times below.</p>
-                {!EMAIL_ENABLED&&(
-                  <div style={{marginTop:"12px",padding:"10px 14px",borderRadius:"8px",background:"rgba(232,168,124,0.08)",border:`1px solid ${C.accentBdr}`,fontSize:"12px",color:C.textMid}}>
-                    ⚠️ Email notifications are not configured yet. See README for setup instructions.
-                  </div>
-                )}
-              </div>
-
-              {/* Tabs */}
-              <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,marginBottom:"24px",overflowX:"auto"}}>
-                {["calendar","bookings"].map(t=>(
-                  <button key={t} onClick={()=>setAdminTab(t)} style={{
-                    background:"transparent",border:"none",
-                    color:adminTab===t?C.accent:C.textSoft,
-                    fontSize:"12px",letterSpacing:"0.1em",textTransform:"uppercase",
-                    padding:"10px 18px",cursor:"pointer",
-                    borderBottom:adminTab===t?`2px solid ${C.accent}`:"2px solid transparent",
-                    marginBottom:"-1px",fontWeight:"700",whiteSpace:"nowrap",
-                  }}>{t}{t==="bookings"?` (${bookings.length})`:""}</button>
-                ))}
-              </div>
-
-              {adminTab==="calendar"&&(
-                <div className="admin-two-col">
-                  <div>
-                    <span style={labelSt}>Click a day to toggle all slots</span>
-                    <div style={{...cardSt,padding:"18px"}}>
-                      <CalendarGrid year={adminYear} month={adminMonth} onNav={d=>navMonth(d,true)} renderDay={(day,key)=>{
-                        const isPast=isDatePast(key);
-                        const slots=availability[key]||[];
-                        const open=slots.filter(t=>!isBooked(key,t)).length;
-                        const total=slots.length;
-                        let bg="transparent",border=`1px solid transparent`,color=isPast?C.textSoft+"33":C.textSoft;
-                        if(!isPast&&total>0){bg=C.accentDim;border=`1px solid ${C.accentBdr}`;color=C.accent;}
-                        return(
-                          <div key={day} className="cal-day">
-                            <div
-                              className={"cal-day-inner" + (!isPast?" clickable":"")}
-                              onClick={()=>!isPast&&adminToggleDay(key)}
-                              style={{background:bg,border,color}}
-                            >
-                              {day}
-                              {!isPast&&total>0&&<div style={{fontSize:"8px",marginTop:"2px",color:C.accent,fontWeight:"700"}}>{open}✓</div>}
-                            </div>
-                          </div>
-                        );
-                      }}/>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span style={labelSt}>Fine-tune slots — {MONTHS[adminMonth]}</span>
-                    {monthDates.filter(d=>!isDatePast(d)).length===0?(
-                      <p style={{color:C.textSoft,fontSize:"14px"}}>No upcoming dates this month.</p>
-                    ):(
-                      monthDates.filter(d=>!isDatePast(d)).map(d=>{
-                        const slots=availability[d]||[];
-                        return(
-                          <div key={d} style={{marginBottom:"16px"}}>
-                            <div style={{fontSize:"13px",color:C.textMid,marginBottom:"8px",fontWeight:"600"}}>{formatDate(d)}</div>
-                            <div className="slot-pills">
-                              {TIME_SLOTS.map(t=>{
-                                const on=slots.includes(t),bk=isBooked(d,t);
-                                return(
-                                  <div key={t} onClick={()=>adminToggleTime(d,t)} style={{
-                                    padding:"5px 10px",borderRadius:"6px",fontSize:"12px",
-                                    cursor:bk?"default":"pointer",userSelect:"none",transition:"all 0.13s",
-                                    background:bk?C.slateDim:on?C.accentDim:"transparent",
-                                    border:`1px solid ${bk?C.slateBdr:on?C.accentBdr:C.border}`,
-                                    color:bk?C.slate:on?C.accent:C.textSoft,
-                                    fontWeight:on?"600":"normal",
-                                  }}>{t}{bk?" ✓":""}</div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {adminTab==="bookings"&&(
-                <div>
-                  {bookings.length===0?(
-                    <div style={{...cardSt,textAlign:"center",padding:"48px"}}>
-                      <div style={{fontSize:"34px",marginBottom:"12px"}}>📭</div>
-                      <p style={{color:C.textSoft,fontSize:"15px"}}>No bookings yet.</p>
-                    </div>
-                  ):(<>
-                    {upcoming.length>0&&(<>
-                      <span style={labelSt}>Upcoming ({upcoming.length})</span>
-                      {upcoming.map(b=><BookingCard key={b.id} b={b} onDelete={deleteBooking}/>)}
-                    </>)}
-                    {past.length>0&&(<>
-                      <span style={{...labelSt,marginTop:"24px",display:"block"}}>Past ({past.length})</span>
-                      {past.map(b=><BookingCard key={b.id} b={b} onDelete={deleteBooking} past/>)}
-                    </>)}
-                  </>)}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      }
-
-      // ── Public: done ─────────────────────────────────────────────────────
-      if(bookStep==="done") return(
-        <div style={appWrap}>
-          <Header onAdmin={()=>setView("login")}/>
-          <div style={{maxWidth:"440px",margin:"60px auto",padding:"0 20px",textAlign:"center"}}>
-            <div style={{
-              width:"68px",height:"68px",borderRadius:"50%",
-              background:C.greenDim,border:`2px solid ${C.greenBdr}`,
-              display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:"30px",margin:"0 auto 18px",
-            }}>✓</div>
-            <h2 style={{fontSize:"26px",fontWeight:"normal",marginBottom:"10px",color:C.text}}>You're booked!</h2>
-            <p style={{color:C.textMid,fontSize:"15px",lineHeight:1.8,marginBottom:"4px"}}>
-              <em style={{color:C.accent}}>{bookName}</em>, you're confirmed for:
-            </p>
-            <div style={{
-              ...cardSt,padding:"20px 32px",margin:"14px 0 22px",
-              textAlign:"center",borderColor:C.accentBdr,background:C.accentDim,
-            }}>
-              <div style={{fontSize:"15px",color:C.textMid}}>{formatDate(selectedDate)}</div>
-              <div style={{fontSize:"26px",color:C.accent,marginTop:"8px"}}>{selectedTime}</div>
-            </div>
-            {EMAIL_ENABLED&&(
-              <p style={{color:C.textSoft,fontSize:"13px",marginBottom:"8px"}}>
-                📧 The organizer has been notified of your booking.
-              </p>
-            )}
-            <p style={{color:C.textSoft,fontSize:"13px"}}>They will be in touch with any details.</p>
-            <button className="primary-btn" style={{
-              background:"linear-gradient(135deg,#e8a87c,#d4845a)",border:"none",
-              color:"#1e1a14",padding:"13px 28px",fontSize:"14px",letterSpacing:"0.06em",
-              cursor:"pointer",borderRadius:"9px",fontWeight:"600",
-              boxShadow:"0 4px 16px rgba(232,168,124,0.35)",
-              transition:"all 0.2s",marginTop:"22px",
-            }} onClick={()=>{
-              setBookStep("pick");setSelectedDate(null);setSelectedTime(null);
-              setBookName("");setBookEmail("");setBookNote("");
-            }}>Book Another Slot</button>
-          </div>
-        </div>
-      );
-
-      // ── Public: confirm ───────────────────────────────────────────────────
-      if(bookStep==="confirm") return(
-        <div style={appWrap}>
-          <Header onAdmin={()=>setView("login")}/>
-          <div style={{maxWidth:"460px",margin:"30px auto",padding:"0 20px"}}>
-            <button onClick={()=>{setBookStep("pick");setBookError("");}} style={{
-              background:"transparent",border:"none",color:C.textMid,
-              cursor:"pointer",fontSize:"13px",marginBottom:"20px",padding:0,
-            }}>← Back to calendar</button>
-            <h2 style={{fontSize:"22px",fontWeight:"normal",marginBottom:"16px",color:C.text}}>Confirm your booking</h2>
-            <div style={{...cardSt,marginBottom:"20px",background:C.accentDim,borderColor:C.accentBdr,padding:"18px 20px"}}>
-              <div style={{fontSize:"14px",color:C.textMid}}>{formatDate(selectedDate)}</div>
-              <div style={{fontSize:"26px",color:C.accent,marginTop:"6px"}}>{selectedTime}</div>
-            </div>
-
-            <label style={labelSt}>Your Name *</label>
-            <input style={{...inputSt,marginBottom:"14px"}} placeholder="Enter your name"
-              value={bookName} onChange={e=>setBookName(e.target.value)}/>
-
-            <label style={labelSt}>Your Email {EMAIL_ENABLED?"(recommended — organizer will see this)":"(optional)"}</label>
-            <input style={{...inputSt,marginBottom:"14px"}} type="email" placeholder="your@email.com"
-              value={bookEmail} onChange={e=>setBookEmail(e.target.value)}/>
-
-            <label style={labelSt}>Note for organizer (optional)</label>
-            <textarea style={{...inputSt,minHeight:"75px",marginBottom:"20px"}}
-              placeholder="Anything you'd like to add?"
-              value={bookNote} onChange={e=>setBookNote(e.target.value)}/>
-
-            {bookError&&<p style={{color:C.red,fontSize:"13px",marginBottom:"14px"}}>{bookError}</p>}
-
-            <button className="primary-btn" style={{
-              background:bookLoading?C.surfaceHi:"linear-gradient(135deg,#e8a87c,#d4845a)",
-              border:bookLoading?`1px solid ${C.border}`:"none",
-              color:bookLoading?C.slate:"#1e1a14",
-              padding:"13px 0",fontSize:"14px",letterSpacing:"0.06em",
-              cursor:bookLoading?"not-allowed":"pointer",borderRadius:"9px",fontWeight:"600",
-              boxShadow:bookLoading?"none":"0 4px 16px rgba(232,168,124,0.35)",
-              width:"100%",transition:"all 0.2s",
-            }} onClick={confirmBooking} disabled={bookLoading}>
-              {bookLoading?"Confirming…":"Confirm Booking"}
-            </button>
-          </div>
-        </div>
-      );
-
-      // ── Public: main picker ───────────────────────────────────────────────
-      if(loading) return(
-        <div style={{...appWrap,display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <p style={{color:C.textSoft}}>Loading…</p>
-        </div>
-      );
-
-      const dateSlots=selectedDate?(availability[selectedDate]||[]):[];
-      const openSlots=selectedDate?getOpenSlots(selectedDate):[];
-
-      return(
-        <div style={appWrap}>
-          <Header onAdmin={()=>setView("login")}/>
-
-          {/* Hero */}
-          <div style={{background:"linear-gradient(to right,#1a1d26,#22253a)",borderBottom:`1px solid ${C.border}`,padding:"22px 20px"}}>
-            <div className="hero-inner">
-              <h1 style={{fontSize:"24px",fontWeight:"normal",marginBottom:"5px",color:C.text,letterSpacing:"0.02em"}}>
-                Book a time
-              </h1>
-              <p style={{color:C.textMid,fontSize:"14px",lineHeight:1.6}}>
-                Select an available date, then choose a time slot.
-              </p>
-            </div>
+    return (
+      <div className="page">
+        <Header badge="ADMIN" adminLabel="← Exit Admin" onAdmin={()=>{setView("public");setPw("");}}/>
+        <div className="main">
+          <div style={{marginBottom:24}}>
+            <h2 style={{fontSize:24,fontWeight:"normal",marginBottom:4}}>Admin Panel {saving&&<span style={{fontSize:12,color:"#636078",fontStyle:"italic",marginLeft:8}}>saving…</span>}</h2>
+            <p style={{color:"#9b98ac",fontSize:14,lineHeight:1.6}}>Click any day on the calendar to enable all its time slots. Fine-tune individual times on the right.</p>
+            {!EMAIL_ENABLED&&<div className="notice" style={{marginTop:12}}>⚠️ Email notifications not configured. See README for setup.</div>}
           </div>
 
-          <div className="main-wrap">
-            {Object.keys(availability).length===0&&(
-              <div style={{
-                padding:"12px 16px",borderRadius:"10px",marginBottom:"20px",
-                background:"rgba(232,168,124,0.08)",border:`1px solid ${C.accentBdr}`,
-                fontSize:"13px",color:C.textMid,lineHeight:1.6,
-              }}>
-                📅 No availability has been set yet. If you're the organizer, go to <strong style={{color:C.accent}}>Admin</strong> to add your open dates and times.
-              </div>
-            )}
-            <div className="two-col">
+          <div className="tabs">
+            <button className={"tab"+(adTab==="calendar"?" active":"")} onClick={()=>setAdTab("calendar")}>Calendar</button>
+            <button className={"tab"+(adTab==="bookings"?" active":"")} onClick={()=>setAdTab("bookings")}>Bookings ({bookings.length})</button>
+          </div>
 
-              {/* Calendar */}
+          {adTab==="calendar" && (
+            <div className="admin-cols">
+              {/* Left: month overview */}
               <div>
-                <span style={labelSt}>1 — Choose a date</span>
-                <div style={{...cardSt,padding:"18px"}}>
-                  <CalendarGrid year={year} month={month} onNav={d=>navMonth(d,false)} renderDay={(day,key)=>{
-                    const isPast=isDatePast(key);
-                    const open=getOpenSlots(key).length;
-                    const total=(availability[key]||[]).length;
-                    const isSel=key===selectedDate;
-                    let bg="transparent",border=`1px solid transparent`,color=isPast?C.textSoft+"44":C.textSoft;
-                    if(!isPast){
-                      if(isSel)        {bg="linear-gradient(135deg,#e8a87c,#d4845a)";border="none";color="#1e1a14";}
-                      else if(open>0)  {bg=C.greenDim;border=`1px solid ${C.greenBdr}`;color=C.green;}
-                      else if(total>0) {bg=C.slateDim;border=`1px solid ${C.slateBdr}`;color=C.slate;}
-                    }
-                    const canClick=!isPast&&open>0;
-                    return(
-                      <div key={day} className="cal-day">
-                        <div
-                          className={"cal-day-inner"+(canClick?" clickable":"")}
-                          onClick={()=>canClick&&setSelectedDate(isSel?null:key)}
-                          style={{
-                            background:bg,
-                            border:(!isPast&&isSel)?"none":border,
-                            color:isSel?"#1e1a14":color,
-                            boxShadow:isSel?"0 4px 14px rgba(232,168,124,0.4)":"none",
-                            fontWeight:isSel?"700":"normal",
-                          }}
-                        >
-                          {day}
-                          {!isPast&&open>0&&!isSel&&<div className="cal-dot"/>}
-                          {!isPast&&total>0&&open===0&&<div className="cal-full">FULL</div>}
+                <label className="lbl">Click a day to toggle all its slots</label>
+                <div className="card">
+                  <Calendar year={adYear} month={adMonth} onNav={navAd} cellProps={(key,day)=>{
+                    const p = isPast(key);
+                    const slots = avail[key]||[];
+                    const open  = slots.filter(t=>!isBooked(key,t)).length;
+                    const total = slots.length;
+                    if(p) return {color:"#363a4a"};
+                    if(total>0) return {
+                      bg:"rgba(232,168,124,0.12)", border:"rgba(232,168,124,0.35)",
+                      color:"#e8a87c", clickable:true,
+                      label:open+"✓", labelColor:"#e8a87c",
+                      onClick:()=>adminToggleDay(key)
+                    };
+                    return { color:"#636078", clickable:true, onClick:()=>adminToggleDay(key) };
+                  }}/>
+                </div>
+              </div>
+
+              {/* Right: time slot editor */}
+              <div>
+                <label className="lbl">Fine-tune slots — {MONTHS[adMonth]} {adYear}</label>
+                {mdates.filter(d=>!isPast(d)).length===0
+                  ? <p style={{color:"#636078",fontSize:14}}>No upcoming dates this month.</p>
+                  : mdates.filter(d=>!isPast(d)).map(d=>{
+                    const slots=avail[d]||[];
+                    return (
+                      <div key={d} style={{marginBottom:16}}>
+                        <div style={{fontSize:13,color:"#9b98ac",marginBottom:8,fontWeight:600}}>{fmtDate(d)}</div>
+                        <div className="pill-row">
+                          {TIMES.map(t=>{
+                            const on=slots.includes(t), bk=isBooked(d,t);
+                            return (
+                              <div key={t} onClick={()=>adminToggleTime(d,t)} style={{
+                                padding:"5px 10px",borderRadius:6,fontSize:12,cursor:bk?"default":"pointer",
+                                userSelect:"none",transition:"all 0.12s",
+                                background:bk?"rgba(99,96,120,0.2)":on?"rgba(232,168,124,0.12)":"transparent",
+                                border:`1px solid ${bk?"rgba(99,96,120,0.3)":on?"rgba(232,168,124,0.4)":"#363a4a"}`,
+                                color:bk?"#636078":on?"#e8a87c":"#636078",
+                                fontWeight:on?"600":"normal",
+                              }}>{t}{bk?" ✓":""}</div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
-                  }}/>
-                </div>
-                <div style={{display:"flex",gap:"14px",marginTop:"12px",flexWrap:"wrap"}}>
-                  {[
-                    {bg:C.greenDim,bdr:C.greenBdr,dot:C.green,label:"Available"},
-                    {bg:C.slateDim,bdr:C.slateBdr,dot:C.slate,label:"Fully booked"},
-                  ].map(({bg,bdr,dot,label})=>(
-                    <div key={label} style={{display:"flex",alignItems:"center",gap:"7px",fontSize:"12px"}}>
-                      <div style={{width:"10px",height:"10px",borderRadius:"3px",background:bg,border:`1px solid ${bdr}`}}/>
-                      <span style={{color:dot}}>{label}</span>
-                    </div>
-                  ))}
-                </div>
+                  })
+                }
               </div>
+            </div>
+          )}
 
-              {/* Time slots */}
-              <div>
-                <span style={labelSt}>2 — Choose a time</span>
-                {!selectedDate?(
-                  <div style={{...cardSt,textAlign:"center",padding:"40px 20px"}}>
-                    <div style={{
-                      width:"50px",height:"50px",borderRadius:"50%",
-                      background:C.accentDim,border:`1px solid ${C.accentBdr}`,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      fontSize:"22px",margin:"0 auto 14px",
-                    }}>👆</div>
-                    <p style={{color:C.textMid,fontSize:"14px",lineHeight:1.7}}>
-                      Pick a highlighted date to see available times.
-                    </p>
-                  </div>
-                ):(
-                  <div style={cardSt}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
-                      <p style={{color:C.text,fontSize:"15px",fontWeight:"600"}}>{formatDate(selectedDate)}</p>
-                      <span style={{
-                        fontSize:"11px",color:C.green,
-                        background:C.greenDim,border:`1px solid ${C.greenBdr}`,
-                        padding:"3px 10px",borderRadius:"20px",fontWeight:"700",flexShrink:0,
-                      }}>{openSlots.length} open</span>
-                    </div>
-                    {dateSlots.length===0?(
-                      <p style={{color:C.textSoft,fontSize:"14px"}}>No slots for this date.</p>
-                    ):(
-                      <div className="time-grid">
-                        {dateSlots.map(t=>{
-                          const bk=isBooked(selectedDate,t),isSel=selectedTime===t;
-                          return<TimeChip key={t} label={t}
-                            state={bk?"booked":isSel?"selected":"available"}
-                            onClick={bk?undefined:()=>setSelectedTime(isSel?null:t)}/>;
-                        })}
-                      </div>
-                    )}
-                    {openSlots.length===0&&dateSlots.length>0&&(
-                      <p style={{color:C.slate,fontSize:"13px"}}>All slots are booked for this date.</p>
-                    )}
-                    {selectedTime&&!isBooked(selectedDate,selectedTime)&&(
-                      <button className="primary-btn" style={{
-                        background:"linear-gradient(135deg,#e8a87c,#d4845a)",border:"none",
-                        color:"#1e1a14",padding:"12px 0",fontSize:"14px",letterSpacing:"0.06em",
-                        cursor:"pointer",borderRadius:"9px",fontWeight:"600",
-                        boxShadow:"0 4px 16px rgba(232,168,124,0.35)",
-                        width:"100%",transition:"all 0.2s",marginTop:"4px",
-                      }} onClick={()=>{setBookStep("confirm");setBookError("");}}>
-                        Book {selectedTime} →
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+          {adTab==="bookings" && (
+            <div>
+              {bookings.length===0
+                ? <div className="card" style={{textAlign:"center",padding:48}}><div style={{fontSize:34,marginBottom:12}}>📭</div><p style={{color:"#636078"}}>No bookings yet.</p></div>
+                : <>
+                  {upcoming.length>0&&<><label className="lbl">Upcoming ({upcoming.length})</label>{upcoming.map(b=><AdminBookingCard key={b.id} b={b} onDelete={deleteBooking}/>)}</>}
+                  {past.length>0&&<><label className="lbl" style={{marginTop:24,display:"block"}}>Past ({past.length})</label>{past.map(b=><AdminBookingCard key={b.id} b={b} onDelete={deleteBooking} dim/>)}</>}
+                </>
+              }
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
+  // ── PUBLIC: DONE ──────────────────────────────────────────────────────────
+  if(step==="done") return (
+    <div className="page">
+      <Header onAdmin={()=>setView("login")}/>
+      <div style={{maxWidth:440,margin:"60px auto",padding:"0 20px",textAlign:"center"}}>
+        <div style={{width:68,height:68,borderRadius:"50%",background:"rgba(126,200,164,0.12)",border:"2px solid rgba(126,200,164,0.35)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,margin:"0 auto 18px"}}>✓</div>
+        <h2 style={{fontSize:26,fontWeight:"normal",marginBottom:10}}>You're booked!</h2>
+        <p style={{color:"#9b98ac",fontSize:15,lineHeight:1.8,marginBottom:4}}>
+          <em style={{color:"#e8a87c"}}>{bkName}</em>, you're confirmed for:
+        </p>
+        <div className="card" style={{display:"inline-block",padding:"20px 36px",margin:"14px 0 20px",background:"rgba(232,168,124,0.1)",borderColor:"rgba(232,168,124,0.3)"}}>
+          <div style={{fontSize:14,color:"#9b98ac"}}>{fmtDate(selDate)}</div>
+          <div style={{fontSize:26,color:"#e8a87c",marginTop:6}}>{selTime}</div>
+        </div>
+        {EMAIL_ENABLED&&<p style={{color:"#636078",fontSize:13,marginBottom:8}}>📧 The organizer has been notified.</p>}
+        <p style={{color:"#636078",fontSize:13}}>They'll be in touch with any details.</p>
+        <button className="btn-primary" style={{marginTop:24,maxWidth:260}} onClick={()=>{
+          setStep("pick");setSelDate(null);setSelTime(null);setBkName("");setBkEmail("");setBkNote("");
+        }}>Book Another Slot</button>
+      </div>
+    </div>
+  );
+
+  // ── PUBLIC: CONFIRM ───────────────────────────────────────────────────────
+  if(step==="confirm") return (
+    <div className="page">
+      <Header onAdmin={()=>setView("login")}/>
+      <div style={{maxWidth:460,margin:"30px auto",padding:"0 20px"}}>
+        <button className="btn-back" onClick={()=>{setStep("pick");setBkErr("");}}>← Back to calendar</button>
+        <h2 style={{fontSize:22,fontWeight:"normal",marginBottom:16}}>Confirm your booking</h2>
+        <div className="card" style={{marginBottom:20,background:"rgba(232,168,124,0.1)",borderColor:"rgba(232,168,124,0.3)"}}>
+          <div style={{fontSize:14,color:"#9b98ac"}}>{fmtDate(selDate)}</div>
+          <div style={{fontSize:26,color:"#e8a87c",marginTop:6}}>{selTime}</div>
+        </div>
+        <label className="lbl">Your Name *</label>
+        <input className="inp" placeholder="Enter your name" style={{marginBottom:14}} value={bkName} onChange={e=>setBkName(e.target.value)}/>
+        <label className="lbl">Email {EMAIL_ENABLED?"(organizer will see this)":"(optional)"}</label>
+        <input className="inp" type="email" placeholder="your@email.com" style={{marginBottom:14}} value={bkEmail} onChange={e=>setBkEmail(e.target.value)}/>
+        <label className="lbl">Note (optional)</label>
+        <textarea className="inp" placeholder="Anything for the organizer?" style={{minHeight:76,marginBottom:20}} value={bkNote} onChange={e=>setBkNote(e.target.value)}/>
+        {bkErr&&<p className="err">{bkErr}</p>}
+        <button className="btn-primary" onClick={confirmBooking} disabled={bkLoading}>{bkLoading?"Confirming…":"Confirm Booking"}</button>
+      </div>
+    </div>
+  );
+
+  // ── PUBLIC: MAIN PICKER ───────────────────────────────────────────────────
+  if(!ready) return (
+    <div className="page" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <p style={{color:"#636078"}}>Loading…</p>
+    </div>
+  );
+
+  const hasAnyAvail = Object.values(avail).some(slots => slots.length > 0);
+  const slots  = selDate ? (avail[selDate]||[]) : [];
+  const open   = selDate ? openSlots(selDate) : [];
+
+  return (
+    <div className="page">
+      <Header onAdmin={()=>setView("login")}/>
+      <div className="hero">
+        <h1 style={{fontSize:24,fontWeight:"normal",marginBottom:5,letterSpacing:"0.02em"}}>Book a time</h1>
+        <p style={{color:"#9b98ac",fontSize:14,lineHeight:1.6}}>Select an available date, then choose a time slot.</p>
+      </div>
+
+      <div className="main">
+        {!hasAnyAvail && (
+          <div className="notice">
+            📅 No availability has been set yet. If you're the organizer, click <strong style={{color:"#e8a87c"}}>Admin</strong> (top right) to open your available dates.
+          </div>
+        )}
+
+        <div className="two-col">
+
+          {/* Calendar */}
+          <div>
+            <label className="lbl">1 — Choose a date</label>
+            <div className="card">
+              <Calendar year={pubYear} month={pubMonth} onNav={navPub} cellProps={(key,day)=>{
+                const past  = isPast(key);
+                const open  = openSlots(key).length;
+                const total = (avail[key]||[]).length;
+                const sel   = key===selDate;
+
+                if(past) return { color:"#363a4a" };
+
+                if(sel) return {
+                  bg:"linear-gradient(135deg,#e8a87c,#d4845a)", color:"#1e1a14",
+                  bold:true, shadow:"0 4px 14px rgba(232,168,124,0.4)",
+                  clickable:true, onClick:()=>setSelDate(null)
+                };
+                if(open>0) return {
+                  bg:"rgba(126,200,164,0.12)", border:"rgba(126,200,164,0.35)", color:"#7ec8a4",
+                  dot:true, clickable:true,
+                  onClick:()=>{ setSelDate(key); setSelTime(null); }
+                };
+                if(total>0) return {
+                  bg:"rgba(99,96,120,0.15)", border:"rgba(99,96,120,0.25)", color:"#636078",
+                  label:"FULL", labelColor:"#636078"
+                };
+                return { color:"#636078" };
+              }}/>
+            </div>
+
+            {/* Legend */}
+            <div style={{display:"flex",gap:16,marginTop:12,flexWrap:"wrap"}}>
+              {[
+                {bg:"rgba(126,200,164,0.12)",bdr:"rgba(126,200,164,0.35)",c:"#7ec8a4",l:"Available"},
+                {bg:"rgba(99,96,120,0.15)",bdr:"rgba(99,96,120,0.25)",c:"#636078",l:"Fully booked"},
+              ].map(({bg,bdr,c,l})=>(
+                <div key={l} style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}>
+                  <div style={{width:11,height:11,borderRadius:3,background:bg,border:`1px solid ${bdr}`}}/>
+                  <span style={{color:c}}>{l}</span>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      );
-    }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
+          {/* Time slots */}
+          <div>
+            <label className="lbl">2 — Choose a time</label>
+            {!selDate ? (
+              <div className="card" style={{textAlign:"center",padding:"40px 20px"}}>
+                <div style={{width:50,height:50,borderRadius:"50%",background:"rgba(232,168,124,0.1)",border:"1px solid rgba(232,168,124,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,margin:"0 auto 14px"}}>👆</div>
+                <p style={{color:"#9b98ac",fontSize:14,lineHeight:1.7}}>
+                  {hasAnyAvail ? "Pick a green date on the calendar to see available times." : "No dates available yet."}
+                </p>
+              </div>
+            ) : (
+              <div className="card">
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:8}}>
+                  <span style={{fontSize:15,fontWeight:600}}>{fmtDate(selDate)}</span>
+                  <span className="badge-green">{open.length} open</span>
+                </div>
+                {slots.length===0
+                  ? <p style={{color:"#636078",fontSize:14}}>No slots for this date.</p>
+                  : <div className="time-grid">
+                      {slots.map(t=>{
+                        const bk  = isBooked(selDate,t);
+                        const sel = selTime===t;
+                        return (
+                          <div key={t}
+                            className={"tchip "+(bk?"booked":sel?"selected":"available")}
+                            onClick={bk?undefined:()=>setSelTime(sel?null:t)}
+                          >
+                            {t}
+                            {bk&&<div style={{fontSize:9,fontWeight:700,marginTop:2,letterSpacing:"0.05em"}}>FILLED</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                }
+                {open.length===0&&slots.length>0&&<p style={{color:"#636078",fontSize:13}}>All slots are booked for this date.</p>}
+                {selTime&&!isBooked(selDate,selTime)&&(
+                  <button className="btn-primary" style={{marginTop:8}} onClick={()=>{setStep("confirm");setBkErr("");}}>
+                    Book {selTime} →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminBookingCard({ b, onDelete, dim }) {
+  return (
+    <div className="card" style={{opacity:dim?0.55:1,borderLeft:"3px solid #e8a87c",padding:"16px 18px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:15,fontWeight:600}}>{b.name}</div>
+          <div style={{fontSize:13,color:"#e8a87c",marginTop:4}}>{fmtDate(b.date)} · {b.time}</div>
+          {b.email&&<div style={{fontSize:12,color:"#9b98ac",marginTop:4}}>✉ {b.email}</div>}
+          {b.note&&<div style={{fontSize:13,color:"#9b98ac",marginTop:6,fontStyle:"italic"}}>"{b.note}"</div>}
+          <div style={{fontSize:11,color:"#636078",marginTop:7}}>
+            Booked {new Date(b.bookedAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}
+            {b.emailSent&&<span style={{marginLeft:8,color:"#7ec8a4",fontSize:10}}>✉ notified</span>}
+          </div>
+        </div>
+        <button onClick={()=>onDelete(b.id)} style={{background:"none",border:"none",color:"#636078",cursor:"pointer",fontSize:20,lineHeight:1,padding:0,flexShrink:0}}>×</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
 </body>
 </html>
