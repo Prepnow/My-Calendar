@@ -117,14 +117,19 @@ const CFG = {
   // Firebase
   firebaseUrl: "https://calendar-ff8ea-default-rtdb.firebaseio.com",
 
-  // ── Email notifications via Formspree (free — formspree.io) ──────
-  // 1. Go to formspree.io → sign up free → New Form → copy the form ID
-  // 2. Paste it below, e.g. "xpwzgkrb"
-  // That's it — bookings go straight to your Gmail, no other setup needed.
-  formspreeId : "mykdnygr",   // ← paste your Formspree form ID here
+  // ── Admin notification (formspree.io — free) ─────────────────────
+  // formspree.io → New Form → paste the ID (e.g. "xpwzgkrb")
+  formspreeId : "",   // ← your Formspree form ID
+
+  // ── Auto-reply to booker (emailjs.com — free) ─────────────────────
+  // See README for setup. Fill in all 3 to send bookers a confirmation.
+  ejPublicKey  : "",  // EmailJS → Account → Public Key
+  ejServiceId  : "",  // EmailJS → Email Services → Service ID
+  ejTemplateId : "template_ctf27my",  // EmailJS → Email Templates → Template ID
 };
 
-const EMAIL_READY = !!CFG.formspreeId;
+const EMAIL_READY  = !!CFG.formspreeId;
+const REPLY_READY  = !!(CFG.ejPublicKey && CFG.ejServiceId && CFG.ejTemplateId);
 // ══════════════════════════════════════════════════════════════════
 
 const FIREBASE_READY = CFG.firebaseUrl !== "YOUR_FIREBASE_URL";
@@ -341,7 +346,7 @@ function vConfirm(){
     </div>
     <label class="lbl">Your Name *</label>
     <input class="inp" id="f-name" placeholder="Enter your name" value="${esc(S.name)}" oninput="S.name=this.value"/>
-    <label class="lbl">Email (optional)</label>
+    <label class="lbl">Email ${REPLY_READY ? "* (required for confirmation)" : "(optional)"}</label>
     <input class="inp" id="f-email" type="email" placeholder="your@email.com" value="${esc(S.email)}" oninput="S.email=this.value"/>
     <label class="lbl">Note for organizer (optional)</label>
     <textarea class="inp" id="f-note" rows="3" placeholder="Anything you'd like to add?" oninput="S.note=this.value">${esc(S.note)}</textarea>
@@ -364,7 +369,7 @@ function vDone(){
         <div style="font-size:14px;color:#9b98ac">${fmtDate(S.sd)}</div>
         <div style="font-size:24px;color:#e8a87c;margin-top:5px">${S.st}</div>
       </div>
-      <p style="color:#636078;font-size:13px;margin-bottom:22px">The organizer will be in touch.</p>
+      <p style="color:#636078;font-size:13px;margin-bottom:22px">${REPLY_READY && S.email ? 'A confirmation email has been sent to ' + esc(S.email) + '.' : 'The organizer will be in touch.'}</p>
       <button class="btn-primary" style="max-width:240px;margin:0 auto" onclick="bookAgain()">Book Another Slot</button>
     </div>
   </div>`;
@@ -513,6 +518,7 @@ async function doBook(){
   const n=document.getElementById('f-name'),e=document.getElementById('f-email'),nt=document.getElementById('f-note');
   if(n)S.name=n.value; if(e)S.email=e.value; if(nt)S.note=nt.value;
   if(!S.name.trim()){S.berr="Please enter your name.";render();return;}
+  if(REPLY_READY && !S.email.trim()){S.berr="Please enter your email to receive a confirmation.";render();return;}
   if(isBook(S.sd,S.st)){S.berr="Slot just taken — please choose another.";S.step="pick";render();return;}
   S.busy=true;S.berr="";render();
   const entry={
@@ -523,7 +529,8 @@ async function doBook(){
   };
   S.books=[...S.books,entry];
   await save();
-  sendNotification(entry); // fire-and-forget email
+  sendNotification(entry);  // admin notification via Formspree
+  sendAutoReply(entry);     // confirmation to booker via EmailJS
   S.busy=false;S.step="done";render();
 }
 
@@ -547,6 +554,37 @@ async function sendNotification(entry){
     });
     console.log("Notification sent via Formspree");
   }catch(e){ console.warn("Notification failed:",e); }
+}
+
+// -- Auto-reply to booker via EmailJS (uses "Auto-Reply" template) --
+async function sendAutoReply(entry){
+  if(!REPLY_READY || !entry.email) return;
+  try{
+    if(!window.emailjs){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    emailjs.init(CFG.ejPublicKey);
+    // Variable names match EmailJS "Auto-Reply" template exactly:
+    // "email" → goes into the To Email field ({{email}})
+    // "name"  → the booker's name
+    // "title" → used as the email subject/reference
+    // Extra variables fill in the body if you edit the template content
+    await emailjs.send(CFG.ejServiceId, CFG.ejTemplateId, {
+      email        : entry.email,              // recipient — DO NOT rename
+      name         : entry.name,               // booker name
+      title        : `Booking confirmed: ${fmtDate(entry.date)} at ${entry.time}`,
+      booking_date : fmtDate(entry.date),
+      booking_time : entry.time,
+      booking_note : entry.note || "—",
+      app_title    : CFG.title,
+    });
+    console.log("Auto-reply sent to", entry.email);
+  }catch(e){ console.warn("Auto-reply failed:",e); }
 }
 
 (async()=>{
