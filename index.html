@@ -111,13 +111,20 @@ textarea{resize:vertical}
 //  CONFIG — fill these in (see README for instructions)
 // ══════════════════════════════════════════════════════════════════
 const CFG = {
-  pass  : "admin123",         // ← your admin password
-  title : "Scheduly",         // ← your name / brand
+  pass  : "admin123",         // your admin password
+  title : "Scheduly",         // your name / brand
 
-  // Firebase Realtime Database
-  // Get this from Firebase Console → Project Settings → your web app
+  // Firebase
   firebaseUrl: "https://calendar-ff8ea-default-rtdb.firebaseio.com",
+
+  // ── Email notifications via Formspree (free — formspree.io) ──────
+  // 1. Go to formspree.io → sign up free → New Form → copy the form ID
+  // 2. Paste it below, e.g. "xpwzgkrb"
+  // That's it — bookings go straight to your Gmail, no other setup needed.
+  formspreeId : "mykdnygr",   // ← paste your Formspree form ID here
 };
+
+const EMAIL_READY = !!CFG.formspreeId;
 // ══════════════════════════════════════════════════════════════════
 
 const FIREBASE_READY = CFG.firebaseUrl !== "YOUR_FIREBASE_URL";
@@ -516,10 +523,32 @@ async function doBook(){
   };
   S.books=[...S.books,entry];
   await save();
+  sendNotification(entry); // fire-and-forget email
   S.busy=false;S.step="done";render();
 }
 
 // ── Boot ──────────────────────────────────────────────────────────
+
+// -- Email notification via Formspree --
+async function sendNotification(entry){
+  if(!EMAIL_READY) return;
+  try{
+    await fetch(`https://formspree.io/f/${CFG.formspreeId}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "Accept": "application/json"},
+      body: JSON.stringify({
+        _subject : `New booking: ${entry.name} on ${fmtDate(entry.date)} at ${entry.time}`,
+        Name     : entry.name,
+        Email    : entry.email || "not provided",
+        Date     : fmtDate(entry.date),
+        Time     : entry.time,
+        Note     : entry.note || "none",
+      }),
+    });
+    console.log("Notification sent via Formspree");
+  }catch(e){ console.warn("Notification failed:",e); }
+}
+
 (async()=>{
   render(); // show spinner
   await load();
