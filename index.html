@@ -125,7 +125,7 @@ const CFG = {
   // See README for setup. Fill in all 3 to send bookers a confirmation.
   ejPublicKey  : "",  // EmailJS → Account → Public Key
   ejServiceId  : "",  // EmailJS → Email Services → Service ID
-  ejTemplateId : "template_ctf27my",  // EmailJS → Email Templates → Template ID
+  ejTemplateId : "",  // EmailJS → Email Templates → Template ID
 };
 
 const EMAIL_READY  = !!CFG.formspreeId;
@@ -149,6 +149,7 @@ const S={
   berr:"",busy:false,
   pw:"",pwerr:false,
   syncing:false, syncErr:false, loaded:false,
+  testStatus:'',  // email test result message
 };
 (()=>{const n=new Date();S.py=S.ay=n.getFullYear();S.pm=S.am=n.getMonth();})();
 
@@ -448,8 +449,25 @@ function vAdmin(){
     <div class="tabs">
       <button class="tab ${S.atab==='cal'?'active':''}" onclick="setTab('cal')">Calendar</button>
       <button class="tab ${S.atab==='books'?'active':''}" onclick="setTab('books')">Bookings (${S.books.length})</button>
+      <button class="tab ${S.atab==='test'?'active':''}" onclick="setTab('test')">&#9993; Test Email</button>
     </div>
-    ${S.atab==='cal'?`<div class="adm-col">
+    ${S.atab==='test'?`<div style="max-width:480px">
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">Email Configuration Status</div>
+        <div style="font-size:13px;line-height:2;color:#9b98ac">
+          <div>Admin notifications (Formspree): <strong style="color:${EMAIL_READY?'#7ec8a4':'#e07878'}">${EMAIL_READY?'&#10003; Configured':'&#10007; Not configured — formspreeId is empty'}</strong></div>
+          <div>Auto-reply (EmailJS): <strong style="color:${REPLY_READY?'#7ec8a4':'#e07878'}">${REPLY_READY?'&#10003; Configured':'&#10007; Not configured — ejPublicKey / ejServiceId / ejTemplateId empty'}</strong></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">Send a Test Notification</div>
+        <p style="font-size:13px;color:#9b98ac;margin-bottom:14px;line-height:1.6">Sends a fake booking to your configured email(s) so you can verify everything is working.</p>
+        <label class="lbl">Your email (for auto-reply test)</label>
+        <input class="inp" id="test-email" placeholder="your@email.com" type="email"/>
+        ${S.testStatus?`<div style="padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;background:${S.testStatus.startsWith('✓')?'rgba(126,200,164,.12)':'rgba(224,120,120,.12)'};border:1px solid ${S.testStatus.startsWith('✓')?'rgba(126,200,164,.35)':'rgba(224,120,120,.35)'};color:${S.testStatus.startsWith('✓')?'#7ec8a4':'#e07878'}">${S.testStatus}</div>`:''}
+        <button class="btn-primary" onclick="testEmail()">Send Test Email</button>
+      </div>
+    </div>`:S.atab==='cal'?`<div class="adm-col">
       <div><span class="lbl">Click a day to toggle all slots</span><div class="card">${cal}</div></div>
       <div><span class="lbl">Fine-tune &#8212; ${MONTHS[S.am]} ${S.ay}</span>${editor}</div>
     </div>`:`<div>${bkHtml}</div>`}
@@ -585,6 +603,76 @@ async function sendAutoReply(entry){
     });
     console.log("Auto-reply sent to", entry.email);
   }catch(e){ console.warn("Auto-reply failed:",e); }
+}
+
+// -- Test email function --
+async function testEmail(){
+  const emailEl = document.getElementById('test-email');
+  const testEmailAddr = emailEl ? emailEl.value.trim() : '';
+  
+  const fakeEntry = {
+    name : "Test Person",
+    email: testEmailAddr || "test@example.com",
+    date : new Date().toISOString().slice(0,10).replace(/-/g,(m,i)=>i===0?m:'-').replace(/(\d{4})-(\d{2})-(\d{2})/,'$1-$2-$3'),
+    time : "10:00 AM",
+    note : "This is a test booking",
+  };
+  // make a proper date key for today
+  const n=new Date();
+  fakeEntry.date = n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+
+  S.testStatus = "Sending…"; render();
+  
+  let results = [];
+  
+  // Test Formspree
+  if(EMAIL_READY){
+    try{
+      const r = await fetch(`https://formspree.io/f/${CFG.formspreeId}`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json","Accept":"application/json"},
+        body: JSON.stringify({
+          _subject : `TEST booking: ${fakeEntry.name} on ${fmtDate(fakeEntry.date)} at ${fakeEntry.time}`,
+          Name: fakeEntry.name, Email: fakeEntry.email,
+          Date: fmtDate(fakeEntry.date), Time: fakeEntry.time, Note: fakeEntry.note,
+        }),
+      });
+      const d = await r.json();
+      if(r.ok) results.push("✓ Admin notification sent via Formspree — check your inbox");
+      else results.push("✗ Formspree error: " + (d.error||r.status) + " — check your formspreeId and that your Formspree form is activated");
+    }catch(e){ results.push("✗ Formspree failed: " + e.message); }
+  } else {
+    results.push("— Admin notification skipped (formspreeId not set)");
+  }
+
+  // Test EmailJS auto-reply
+  if(REPLY_READY){
+    if(!testEmailAddr){ results.push("— Auto-reply skipped: enter your email above to test it"); }
+    else {
+      try{
+        if(!window.emailjs){
+          await new Promise((res,rej)=>{
+            const s=document.createElement('script');
+            s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+            s.onload=res; s.onerror=rej; document.head.appendChild(s);
+          });
+        }
+        emailjs.init(CFG.ejPublicKey);
+        const r = await emailjs.send(CFG.ejServiceId, CFG.ejTemplateId, {
+          email: testEmailAddr, name: fakeEntry.name,
+          title: `TEST: Booking confirmed ${fmtDate(fakeEntry.date)} at ${fakeEntry.time}`,
+          booking_date: fmtDate(fakeEntry.date), booking_time: fakeEntry.time,
+          booking_note: fakeEntry.note, app_title: CFG.title,
+        });
+        results.push("✓ Auto-reply sent to " + testEmailAddr + " via EmailJS — check inbox");
+      }catch(e){ results.push("✗ EmailJS error: " + e.message + " — check your ejPublicKey, ejServiceId, ejTemplateId"); }
+    }
+  } else {
+    results.push("— Auto-reply skipped (EmailJS not configured)");
+  }
+
+  S.testStatus = results.join(" | ");
+  render();
 }
 
 (async()=>{
