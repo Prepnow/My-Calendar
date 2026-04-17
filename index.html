@@ -137,7 +137,7 @@ const DB = CFG.firebaseUrl.replace(/\/+$/, "") + "/scheduly.json";
 
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS=["Su","Mo","Tu","We","Th","Fr","Sa"];
-const TIMES=["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"];
+const TIMES=["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM"];
 
 // ── State ─────────────────────────────────────────────────────────
 const S={
@@ -150,6 +150,7 @@ const S={
   pw:"",pwerr:false,
   syncing:false, syncErr:false, loaded:false,
   testStatus:'',  // email test result message
+  cancelId:null, cancelStatus:'', // cancellation flow
 };
 (()=>{const n=new Date();S.py=S.ay=n.getFullYear();S.pm=S.am=n.getMonth();})();
 
@@ -163,6 +164,26 @@ const isBook =(dt,tm)=>S.books.some(b=>b.date===dt&&b.time===tm);
 const openOf = dt=>(S.avail[dt]||[]).filter(t=>!isBook(dt,t));
 const anyOpen=()=>Object.values(S.avail).some(a=>a.length>0);
 const esc    = s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// Convert date key + time string to a Date object
+function slotDate(dateKey, timeStr){
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const [t, ampm] = timeStr.split(' ');
+  let [h, min] = t.split(':').map(Number);
+  if(ampm==='PM' && h!==12) h+=12;
+  if(ampm==='AM' && h===12) h=0;
+  return new Date(y, m-1, d, h, min||0);
+}
+// Returns true if cancellation is still allowed (2+ hours before slot)
+function canCancel(dateKey, timeStr){
+  const slot = slotDate(dateKey, timeStr);
+  const now  = new Date();
+  return (slot - now) >= 2 * 60 * 60 * 1000;
+}
+// Build a cancellation URL for a booking
+function cancelUrl(bookingId){
+  return window.location.href.split('?')[0] + '?cancel=' + bookingId;
+}
 
 // ── Firebase REST ─────────────────────────────────────────────────
 async function dbRead(){
@@ -220,12 +241,14 @@ async function save(){
 // ── Render ────────────────────────────────────────────────────────
 function render(){
   let h="";
-  if(!S.loaded)              h=vLoad();
-  else if(S.view==="login")  h=vLogin();
-  else if(S.view==="admin")  h=vAdmin();
-  else if(S.step==="confirm")h=vConfirm();
-  else if(S.step==="done")   h=vDone();
-  else                        h=vPub();
+  if(!S.loaded)                    h=vLoad();
+  else if(S.view==="login")        h=vLogin();
+  else if(S.view==="admin")        h=vAdmin();
+  else if(S.view==="cancel")       h=vCancel();
+  else if(S.view==="cancelled")    h=vCancelled();
+  else if(S.step==="confirm")      h=vConfirm();
+  else if(S.step==="done")         h=vDone();
+  else                              h=vPub();
   document.getElementById("app").innerHTML=h;
 }
 
@@ -372,8 +395,55 @@ function vDone(){
       </div>
       <p style="color:#636078;font-size:13px;margin-bottom:22px">${REPLY_READY && S.email ? 'A confirmation email has been sent to ' + esc(S.email) + '.' : 'The organizer will be in touch.'}</p>
       <button class="btn-primary" style="max-width:240px;margin:0 auto" onclick="bookAgain()">Book Another Slot</button>
+      ${S.lastBookingId?`<div style="margin-top:22px;padding:14px 16px;background:rgba(99,96,120,.12);border:1px solid #363a4a;border-radius:10px;font-size:12px;color:#9b98ac;line-height:1.8">
+        <div style="margin-bottom:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:10px">Need to cancel?</div>
+        Save this link — you can cancel up to 2 hours before your appointment:<br/>
+        <a href="${cancelUrl(S.lastBookingId)}" style="color:#e8a87c;word-break:break-all;font-size:11px">${cancelUrl(S.lastBookingId)}</a>
+      </div>`:''}
     </div>
   </div>`;
+}
+
+function vCancel(){
+  const b = S.books.find(bk=>bk.id===S.cancelId);
+  if(!b){
+    return`<div class="hdr"><div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div></div>
+    <div class="main"><div style="max-width:420px;margin:40px auto;text-align:center">
+      <div style="font-size:42px;margin-bottom:14px">&#128269;</div>
+      <h2 style="font-size:22px;font-weight:normal;margin-bottom:10px">Booking not found</h2>
+      <p style="color:#9b98ac;font-size:14px;margin-bottom:20px">This booking may have already been cancelled or the link is incorrect.</p>
+      <button class="btn-primary" style="max-width:200px;margin:0 auto" onclick="goBack()">Back to calendar</button>
+    </div></div>`;
+  }
+  const ok = canCancel(b.date, b.time);
+  return`<div class="hdr"><div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div></div>
+  <div class="main"><div style="max-width:420px;margin:40px auto;text-align:center">
+    <div style="font-size:42px;margin-bottom:14px">${ok?'&#128197;':'&#9201;'}</div>
+    <h2 style="font-size:22px;font-weight:normal;margin-bottom:10px">${ok?'Cancel your booking?':'Too late to cancel'}</h2>
+    <div class="card card-hl" style="display:inline-block;padding:16px 30px;margin:0 0 18px;text-align:center">
+      <div style="font-size:13px;color:#9b98ac">${fmtDate(b.date)}</div>
+      <div style="font-size:22px;color:#e8a87c;margin-top:4px">${b.time}</div>
+      <div style="font-size:13px;color:#9b98ac;margin-top:4px">${esc(b.name)}</div>
+    </div>
+    ${ok
+      ? `<p style="color:#9b98ac;font-size:14px;margin-bottom:20px">This will free up the slot for others. Cancellations are allowed up to 2 hours before your appointment.</p>
+         ${S.cancelStatus?`<p class="err">${S.cancelStatus}</p>`:''}
+         <button class="btn-primary" style="max-width:220px;margin:0 auto;background:linear-gradient(135deg,#e07878,#c05050)" onclick="doCancel()">Yes, cancel my booking</button>
+         <button class="btn-back" style="margin-top:14px;display:block;text-align:center" onclick="goBack()">Keep my booking</button>`
+      : `<p style="color:#9b98ac;font-size:14px;margin-bottom:20px">Cancellations must be made at least 2 hours before your appointment time. Please contact the organizer directly.</p>
+         <button class="btn-primary" style="max-width:200px;margin:0 auto" onclick="goBack()">Back to calendar</button>`
+    }
+  </div></div>`;
+}
+
+function vCancelled(){
+  return`<div class="hdr"><div class="hdr-left"><div class="hdr-icon">&#128197;</div><span class="hdr-title">${CFG.title}</span></div></div>
+  <div class="main"><div style="max-width:420px;margin:40px auto;text-align:center">
+    <div style="width:66px;height:66px;border-radius:50%;background:rgba(224,120,120,.1);border:2px solid rgba(224,120,120,.35);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">&#10005;</div>
+    <h2 style="font-size:24px;font-weight:normal;margin-bottom:10px">Booking cancelled</h2>
+    <p style="color:#9b98ac;font-size:14px;line-height:1.7;margin-bottom:22px">Your slot has been freed up. If you'd like to book a different time, use the button below.</p>
+    <button class="btn-primary" style="max-width:220px;margin:0 auto" onclick="bookAgain()">Book a new slot</button>
+  </div></div>`;
 }
 
 function vLogin(){
@@ -499,7 +569,7 @@ function selDate(k){S.sd=S.sd===k?null:k;S.st=null;render();}
 function selTime(t){S.st=S.st===t?null:t;render();}
 function goConfirm(){S.step="confirm";S.berr="";render();}
 function backPick(){S.step="pick";S.berr="";render();}
-function bookAgain(){S.step="pick";S.sd=null;S.st=null;S.name="";S.email="";S.note="";render();}
+function bookAgain(){S.step="pick";S.view="pub";S.sd=null;S.st=null;S.name="";S.email="";S.note="";S.cancelId=null;S.cancelStatus="";render();}
 function goLogin(){S.view="login";S.pw="";S.pwerr=false;render();}
 function goBack(){S.view="pub";render();}
 function exitAdm(){S.view="pub";render();}
@@ -529,6 +599,14 @@ function admTime(k,t){
   if(!next.length)delete av[k];else av[k]=next;
   S.avail=av; save();
 }
+async function doCancel(){
+  const b = S.books.find(bk=>bk.id===S.cancelId);
+  if(!b){ S.cancelStatus="Booking not found."; render(); return; }
+  if(!canCancel(b.date, b.time)){ S.cancelStatus="Cancellation window has passed."; render(); return; }
+  S.books = S.books.filter(bk=>bk.id!==S.cancelId);
+  await save();
+  S.view="cancelled"; render();
+}
 function delBook(id){
   S.books=S.books.filter(b=>b.id!==id); save();
 }
@@ -549,7 +627,7 @@ async function doBook(){
   await save();
   sendNotification(entry);  // admin notification via Formspree
   sendAutoReply(entry);     // confirmation to booker via EmailJS
-  S.busy=false;S.step="done";render();
+  S.busy=false;S.step="done";S.lastBookingId=entry.id;render();
 }
 
 // ── Boot ──────────────────────────────────────────────────────────
@@ -679,6 +757,13 @@ async function testEmail(){
   render(); // show spinner
   await load();
   S.loaded=true;
+  // Check for cancellation link: ?cancel=BOOKING_ID
+  const params = new URLSearchParams(window.location.search);
+  const cancelParam = params.get('cancel');
+  if(cancelParam){
+    S.cancelId = cancelParam;
+    S.view = "cancel";
+  }
   render();
 })();
 </script>
